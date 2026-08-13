@@ -1,0 +1,190 @@
+services:
+    # ── Configuration ─────────────────────────────────────────────────────────
+
+    phpbbseo.framework.configuration.provider:
+        class: phpbbseo\framework\Configuration\ConfigurationProvider
+        arguments:
+            - '@config'
+
+    # ── Context ───────────────────────────────────────────────────────────────
+
+    phpbbseo.framework.context.factory:
+        class: phpbbseo\framework\Context\RequestContextFactory
+        arguments:
+            - '@phpbbseo.framework.configuration.provider'
+
+    phpbbseo.framework.context.entity_seo_context:
+        class: phpbbseo\framework\Context\EntitySeoContext
+        arguments:
+            - '@phpbbseo.framework.rewrite.slug_repository'
+
+    # ── Security ──────────────────────────────────────────────────────────────
+
+    phpbbseo.framework.redirect.url_safety_validator:
+        class: phpbbseo\framework\Redirect\UrlSafetyValidator
+        arguments:
+            - '@phpbbseo.framework.configuration.provider'
+
+    # ── Permalink / Pattern ───────────────────────────────────────────────────
+
+    phpbbseo.framework.rewrite.permalink_configuration:
+        class: phpbbseo\framework\Rewrite\PermalinkConfiguration
+        arguments:
+            - '@phpbbseo.framework.configuration.provider'
+
+    phpbbseo.framework.rewrite.url_pattern_compiler:
+        class: phpbbseo\framework\Rewrite\UrlPatternCompiler
+
+    phpbbseo.framework.rewrite.pattern_conflict_detector:
+        class: phpbbseo\framework\Rewrite\PatternConflictDetector
+
+    phpbbseo.framework.rewrite.route_cache_compiler:
+        class: phpbbseo\framework\Rewrite\RouteCacheCompiler
+        arguments:
+            - '@phpbbseo.framework.rewrite.url_pattern_compiler'
+            - '@phpbbseo.framework.rewrite.pattern_conflict_detector'
+            - '%core.root_path%ext/phpbbseo/framework/store/'
+
+    phpbbseo.framework.url.pagination_resolver:
+        class: phpbbseo\framework\Url\PaginationResolver
+
+    phpbbseo.framework.url.slug_generator:
+        class: phpbbseo\framework\Url\DefaultSlugGenerator
+
+    phpbbseo.framework.rewrite.permalink_profile:
+        class: phpbbseo\framework\Rewrite\PermalinkRewriteProfile
+        arguments:
+            - '@phpbbseo.framework.rewrite.permalink_configuration'
+            - '@phpbbseo.framework.rewrite.url_pattern_compiler'
+            - '@phpbbseo.framework.context.entity_seo_context'
+            - '@phpbbseo.framework.url.slug_generator'
+            - '@phpbbseo.framework.url.pagination_resolver'
+            - '@phpbbseo.framework.configuration.provider'
+
+    phpbbseo.framework.rewrite.inbound_route_resolver:
+        class: phpbbseo\framework\Rewrite\InboundRouteResolver
+        arguments:
+            - '@phpbbseo.framework.rewrite.permalink_profile'
+
+    phpbbseo.framework.rewrite.resource_detector:
+        class: phpbbseo\framework\Rewrite\ResourceDetector
+
+    phpbbseo.framework.rewrite.slug_repository:
+        class: phpbbseo\framework\Rewrite\SlugRepository
+        arguments:
+            - '@dbal.conn'
+            - '@phpbbseo.framework.url.slug_generator'
+            - '%core.table_prefix%'
+
+    phpbbseo.framework.rewrite.public_resource_url_resolver:
+        class: phpbbseo\framework\Rewrite\PublicResourceUrlResolver
+        arguments:
+            - '@phpbbseo.framework.rewrite.resource_detector'
+            - '@phpbbseo.framework.rewrite.permalink_profile'
+            - '@phpbbseo.framework.configuration.provider'
+
+    phpbbseo.framework.console.rebuild_slugs_command:
+        class: phpbbseo\framework\Console\RebuildSlugsCommand
+        arguments:
+            - '@phpbbseo.framework.rewrite.slug_repository'
+        tags:
+            - { name: console.command }
+
+    # ── URL Policies ──────────────────────────────────────────────────────────
+
+    phpbbseo.framework.url.query_parameter_policy:
+        class: phpbbseo\framework\Url\QueryParameterPolicy
+
+    # ── Canonical / Redirect ──────────────────────────────────────────────────
+
+    phpbbseo.framework.canonical.resolver:
+        class: phpbbseo\framework\Canonical\CanonicalResolver
+        arguments:
+            - '@phpbbseo.framework.rewrite.permalink_profile'
+            - '@phpbbseo.framework.rewrite.inbound_route_resolver'
+            - '@phpbbseo.framework.configuration.provider'
+            - '@phpbbseo.framework.url.pagination_resolver'
+
+    phpbbseo.framework.redirect.resolver:
+        class: phpbbseo\framework\Redirect\RedirectResolver
+
+    # ── Metadata Engine ───────────────────────────────────────────────────────
+
+    phpbbseo.framework.metadata.plain_text_normalizer:
+        class: phpbbseo\framework\Metadata\PlainTextNormalizer
+
+    phpbbseo.framework.metadata.pattern_renderer:
+        class: phpbbseo\framework\Metadata\MetadataPatternRenderer
+
+    phpbbseo.framework.metadata.resolver:
+        class: phpbbseo\framework\Metadata\MetadataResolver
+        arguments:
+            - '@phpbbseo.framework.configuration.provider'
+            - '@phpbbseo.framework.metadata.pattern_renderer'
+            - '@phpbbseo.framework.metadata.plain_text_normalizer'
+            - '@user'
+            - '@dbal.conn'
+
+    # ── Listener ──────────────────────────────────────────────────────────────
+
+    phpbbseo.framework.listener:
+        class: phpbbseo\framework\EventListener\SeoListener
+        arguments:
+            - '@phpbbseo.framework.context.factory'
+            - '@phpbbseo.framework.context.entity_seo_context'
+            - '@phpbbseo.framework.rewrite.inbound_route_resolver'
+            - '@phpbbseo.framework.rewrite.public_resource_url_resolver'
+            - '@phpbbseo.framework.configuration.provider'
+            - '@phpbbseo.framework.canonical.resolver'
+            - '@phpbbseo.framework.redirect.resolver'
+            - '@phpbbseo.framework.redirect.url_safety_validator'
+            - '@request'
+            - '@phpbbseo.framework.rewrite.slug_repository'
+            - '@phpbbseo.framework.url.pagination_resolver'
+            - '@template'
+        tags:
+            - { name: event.listener }
+
+    phpbbseo.framework.metadata.listener:
+        class: phpbbseo\framework\EventListener\MetadataListener
+        arguments:
+            - '@phpbbseo.framework.configuration.provider'
+            - '@phpbbseo.framework.metadata.resolver'
+            - '@template'
+            - '@config'
+            - '@request'
+        tags:
+            - { name: event.listener }
+
+    # ── Sitemap Services ──────────────────────────────────────────────────────
+
+    phpbbseo.framework.sitemap.repository:
+        class: phpbbseo\framework\Sitemap\SitemapRepository
+        arguments:
+            - '@dbal.conn'
+            - '@auth'
+            - '@cache'
+            - '%core.table_prefix%'
+
+    phpbbseo.framework.sitemap.url_generator:
+        class: phpbbseo\framework\Sitemap\SitemapUrlGenerator
+        arguments:
+            - '@phpbbseo.framework.rewrite.permalink_profile'
+            - '@config'
+            - '%core.root_path%'
+
+    phpbbseo.framework.sitemap.index_builder:
+        class: phpbbseo\framework\Sitemap\SitemapIndexBuilder
+        arguments:
+            - '@phpbbseo.framework.sitemap.repository'
+            - '@phpbbseo.framework.sitemap.url_generator'
+            - '@phpbbseo.framework.configuration.provider'
+
+    phpbbseo.framework.controller.sitemap:
+        class: phpbbseo\framework\Controller\SitemapController
+        arguments:
+            - '@phpbbseo.framework.sitemap.repository'
+            - '@phpbbseo.framework.sitemap.url_generator'
+            - '@phpbbseo.framework.sitemap.index_builder'
+            - '@phpbbseo.framework.configuration.provider'
+

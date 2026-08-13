@@ -1,0 +1,144 @@
+<!-- INCLUDE @phpbbseo_framework/acp_seo_header.html -->
+
+<!-- IF S_ERROR -->
+	<div class="pseo-notice pseo-notice--error">
+		<span class="pseo-notice-icon">&times;</span>
+		<div>
+			<strong>{L_WARNING}</strong>
+			<p style="margin: 4px 0 0 0;">{ERROR_MSG}</p>
+		</div>
+	</div>
+<!-- ENDIF -->
+
+<div class="pseo-notice pseo-notice--warning">
+	<span class="pseo-notice-icon">&#9888;</span>
+	<div>
+		<strong>{L_WARNING}</strong>
+		<p style="margin: 4px 0 0 0;">{L_SEO_HISTORICAL_WARNING}</p>
+	</div>
+</div>
+
+<form id="acp_seo_permalinks_form" method="post" action="{U_ACTION}">
+	<!-- Forum URLs Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_CARD_FORUMS}</h2>
+			<span class="pseo-badge pseo-badge--neutral">/forum/</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="pattern_forum">
+					<span>{L_SEO_PATTERN_FORUM}</span>
+				</label>
+				<input type="text" id="pattern_forum" name="pattern_forum" value="{PATTERN_FORUM}" class="pseo-input-text" maxlength="255" />
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_SLUG}" data-target="pattern_forum">{TOKEN_SLUG}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_ID}" data-target="pattern_forum">{TOKEN_ID}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_forum">{PREVIEW_FORUM}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Topic URLs Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_CARD_TOPICS}</h2>
+			<span class="pseo-badge pseo-badge--neutral">/topic/</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="pattern_topic">
+					<span>{L_SEO_PATTERN_TOPIC}</span>
+				</label>
+				<input type="text" id="pattern_topic" name="pattern_topic" value="{PATTERN_TOPIC}" class="pseo-input-text" maxlength="255" />
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_SLUG}" data-target="pattern_topic">{TOKEN_SLUG}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_ID}" data-target="pattern_topic">{TOKEN_ID}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_topic">{PREVIEW_TOPIC}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Member URLs Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_CARD_MEMBERS}</h2>
+			<span class="pseo-badge pseo-badge--neutral">/member/</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="pattern_member">
+					<span>{L_SEO_PATTERN_MEMBER}</span>
+				</label>
+				<input type="text" id="pattern_member" name="pattern_member" value="{PATTERN_MEMBER}" class="pseo-input-text" maxlength="255" />
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_SLUG}" data-target="pattern_member">{TOKEN_SLUG}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_ID}" data-target="pattern_member">{TOKEN_ID}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_member">{PREVIEW_MEMBER}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Group URLs Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_CARD_GROUPS}</h2>
+			<span class="pseo-badge pseo-badge--neutral">/group/</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="pattern_group">
+					<span>{L_SEO_PATTERN_GROUP}</span>
+				</label>
+				<input type="text" id="pattern_group" name="pattern_group" value="{PATTERN_GROUP}" class="pseo-input-text" maxlength="255" />
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_SLUG}" data-target="pattern_group">{TOKEN_SLUG}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_ID}" data-target="pattern_group">{TOKEN_ID}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_group">{PREVIEW_GROUP}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Sticky Save Changes Action Bar -->
+	<div class="pseo-actions-bar">
+		<div class="pseo-actions-state" id="pseo-save-state">
+			<span>{L_SEO_ACTION_READY}</span>
+		</div>
+		<div class="pseo-actions-buttons">
+			<input class="pseo-btn pseo-btn--secondary" type="reset" id="reset" name="reset" value="{L_RESET}" />
+			<input class="pseo-btn pseo-btn--primary" type="submit" id="submit" name="submit" value="{L_SUBMIT}" />
+		</div>
+	</div>
+
+	{S_FORM_TOKEN}
+</form>
+
+<!-- INCLUDE @phpbbseo_framework/acp_seo_footer.html -->

@@ -1,0 +1,38 @@
+{
+    "name": "phpbbseo/framework",
+    "type": "phpbb-extension",
+    "description": "Modern SEO framework for phpBB with SEO-friendly URLs, canonical URLs, titles & meta, XML sitemaps and extensible SEO infrastructure.",
+    "homepage": "https://www.phpbbseo.ir/",
+    "version": "1.0.0",
+    "time": "2026-08-14",
+    "license": "GPL-2.0-only",
+    "authors": [
+        {
+            "name": "phpBB SEO",
+            "homepage": "https://www.phpbbseo.ir/",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "source": "https://github.com/phpbb-seo/seo-framework",
+        "issues": "https://github.com/phpbb-seo/seo-framework/issues"
+    },
+    "require": {
+        "php": ">=8.1",
+        "composer/installers": "~1.0"
+    },
+    "require-dev": {
+        "phpbb/epv": "dev-master"
+    },
+    "extra": {
+        "display-name": "phpBB SEO Framework",
+        "soft-require": {
+            "phpbb/phpbb": ">=3.3.0"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "phpbbseo\\framework\\": ""
+        }
+    }
+}

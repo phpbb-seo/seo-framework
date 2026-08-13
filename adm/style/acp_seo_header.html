@@ -1,0 +1,74 @@
+<!-- INCLUDE overall_header.html -->
+
+<link rel="stylesheet" href="{T_ASSETS_PATH}/../ext/phpbbseo/framework/adm/style/css/pseo_admin.css?v=1.0.0" type="text/css" />
+
+<div class="pseo-app" data-base-url="{PSEO_BASE_URL}">
+	<header class="pseo-header">
+		<div class="pseo-brand">
+			<span class="pseo-logo-badge">SEO</span>
+			<div>
+				<h1 class="pseo-brand-title">{L_SEO_APP_TITLE}</h1>
+				<span class="pseo-brand-version">v1.0.0 &bull; {L_SEO_EDITION_LITE}</span>
+			</div>
+		</div>
+		<div class="pseo-header-meta">
+			<!-- IF S_SEO_ENABLED -->
+				<span class="pseo-badge pseo-badge--success">{L_SEO_STATUS_ACTIVE}</span>
+			<!-- ELSE -->
+				<span class="pseo-badge pseo-badge--warning">{L_SEO_STATUS_INACTIVE}</span>
+			<!-- ENDIF -->
+		</div>
+	</header>
+
+	<div class="pseo-layout">
+		<aside class="pseo-sidebar">
+			<div class="pseo-nav-group">
+				<span class="pseo-nav-label">{L_SEO_NAV_LITE}</span>
+				<ul class="pseo-nav-list">
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'dashboard' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_DASHBOARD}">{L_SEO_NAV_DASHBOARD}</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'permalinks' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PERMALINKS}">{L_SEO_NAV_PERMALINKS}</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'titles_meta' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_TITLES_META}">{L_SEO_NAV_TITLES}</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'sitemap' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_SITEMAP}">{L_SEO_NAV_SITEMAP}</a>
+					</li>
+				</ul>
+			</div>
+
+			<div class="pseo-nav-group">
+				<span class="pseo-nav-label">{L_SEO_NAV_PRO}</span>
+				<ul class="pseo-nav-list">
+					<li class="pseo-nav-item is-disabled">
+						<a href="javascript:void(0);">
+							<span>{L_SEO_NAV_SOCIAL}</span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item is-disabled">
+						<a href="javascript:void(0);">
+							<span>{L_SEO_NAV_SCHEMA}</span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item is-disabled">
+						<a href="javascript:void(0);">
+							<span>{L_SEO_NAV_REDIRECTS}</span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item is-disabled">
+						<a href="javascript:void(0);">
+							<span>{L_SEO_NAV_ANALYZER}</span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</aside>
+
+		<main class="pseo-content">

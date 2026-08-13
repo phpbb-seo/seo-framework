@@ -1,0 +1,115 @@
+<!-- INCLUDE @phpbbseo_framework/acp_seo_header.html -->
+
+<form id="pseo_sitemap_form" method="post" action="{U_ACTION}">
+
+	<!-- IF S_ERROR -->
+	<div class="pseo-notice pseo-notice--error">
+		<span class="pseo-notice-icon">&#9888;</span>
+		<div>{ERROR_MSG}</div>
+	</div>
+	<!-- ENDIF -->
+
+	<!-- Status & Index Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_SITEMAP_STATUS_TITLE}</h2>
+			<!-- IF S_SITEMAP_ENABLE -->
+			<span class="pseo-badge pseo-badge--success">{L_SEO_STATUS_ACTIVE}</span>
+			<!-- ELSE -->
+			<span class="pseo-badge pseo-badge--neutral">{L_SEO_STATUS_INACTIVE}</span>
+			<!-- ENDIF -->
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label">
+					<span>{L_SEO_SITEMAP_INDEX_URL}</span>
+				</label>
+				<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+					<input type="text" class="pseo-input-text" value="{SITEMAP_URL}" readonly="readonly" style="max-width: 450px; background: var(--pseo-color-surface-subtle);" />
+					<a href="{SITEMAP_URL}" target="_blank" rel="noopener noreferrer" class="pseo-btn pseo-btn--secondary">
+						{L_SEO_OPEN_SITEMAP} &#8599;
+					</a>
+				</div>
+			</div>
+
+			<div class="pseo-field" style="margin-top: 16px;">
+				<label class="pseo-label">
+					<span>{L_SEO_ROBOTS_RECOMMENDATION}</span>
+				</label>
+				<div style="background: var(--pseo-color-surface-subtle); border: 1px solid var(--pseo-color-border); border-radius: 6px; padding: 8px 12px; font-family: var(--pseo-font-mono); font-size: 13px; color: var(--pseo-color-text-main);">
+					Sitemap: {SITEMAP_URL}
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Statistics Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_SITEMAP_STATISTICS}</h2>
+			<span class="pseo-badge pseo-badge--neutral">{L_SEO_NAV_LITE}</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-stat-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;">
+				<div class="pseo-stat-item" style="background: var(--pseo-color-surface-subtle); padding: 12px; border-radius: 6px; border: 1px solid var(--pseo-color-border-subtle);">
+					<span class="pseo-stat-label" style="display: block; font-size: 12px; color: var(--pseo-color-text-muted);">{L_SEO_STAT_FORUMS}</span>
+					<strong class="pseo-stat-value" style="display: block; font-size: 20px; color: var(--pseo-color-text-main); margin-top: 4px;">{STAT_FORUMS}</strong>
+				</div>
+				<div class="pseo-stat-item" style="background: var(--pseo-color-surface-subtle); padding: 12px; border-radius: 6px; border: 1px solid var(--pseo-color-border-subtle);">
+					<span class="pseo-stat-label" style="display: block; font-size: 12px; color: var(--pseo-color-text-muted);">{L_SEO_STAT_TOPICS}</span>
+					<strong class="pseo-stat-value" style="display: block; font-size: 20px; color: var(--pseo-color-text-main); margin-top: 4px;">{STAT_TOPICS}</strong>
+				</div>
+				<div class="pseo-stat-item" style="background: var(--pseo-color-surface-subtle); padding: 12px; border-radius: 6px; border: 1px solid var(--pseo-color-border-subtle);">
+					<span class="pseo-stat-label" style="display: block; font-size: 12px; color: var(--pseo-color-text-muted);">{L_SEO_STAT_TOPIC_FILES}</span>
+					<strong class="pseo-stat-value" style="display: block; font-size: 20px; color: var(--pseo-color-text-main); margin-top: 4px;">{STAT_FILES}</strong>
+				</div>
+				<div class="pseo-stat-item" style="background: var(--pseo-color-surface-subtle); padding: 12px; border-radius: 6px; border: 1px solid var(--pseo-color-border-subtle);">
+					<span class="pseo-stat-label" style="display: block; font-size: 12px; color: var(--pseo-color-text-muted);">{L_SEO_STAT_MISSING_SLUGS}</span>
+					<strong class="pseo-stat-value" style="display: block; font-size: 20px; color: <!-- IF STAT_MISSING != '0' -->var(--pseo-color-warning)<!-- ELSE -->var(--pseo-color-success)<!-- ENDIF -->; margin-top: 4px;">{STAT_MISSING}</strong>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Configuration Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_SITEMAP_CONFIG}</h2>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="sitemap_enable">
+					<span>{L_SEO_SITEMAP_ENABLE}</span>
+				</label>
+				<label style="display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer;">
+					<input type="checkbox" id="sitemap_enable" name="sitemap_enable" value="1" <!-- IF S_SITEMAP_ENABLE -->checked="checked"<!-- ENDIF --> />
+					<span>{L_SEO_SITEMAP_ENABLE_EXPLAIN}</span>
+				</label>
+			</div>
+
+			<div class="pseo-field" style="margin-top: 14px;">
+				<label class="pseo-label" for="urls_per_file">
+					<span>{L_SEO_URLS_PER_FILE}</span>
+				</label>
+				<input type="number" id="urls_per_file" name="urls_per_file" value="{URLS_PER_FILE}" min="100" max="50000" class="pseo-input-text" style="max-width: 140px;" />
+				<span class="pseo-field-help" style="display: block; font-size: 12px; color: var(--pseo-color-text-muted); margin-top: 4px;">{L_SEO_URLS_PER_FILE_EXPLAIN}</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Sticky Action Bar -->
+	<div class="pseo-actions-bar">
+		<div class="pseo-actions-state">
+			<span id="pseo_status_indicator" style="display: none;">&#9679; {L_SEO_UNSAVED_CHANGES}</span>
+		</div>
+		<div class="pseo-actions-buttons">
+			<button type="submit" name="submit" value="1" class="pseo-btn pseo-btn--primary">
+				{L_SUBMIT}
+			</button>
+		</div>
+	</div>
+
+	{S_FORM_TOKEN}
+</form>
+
+<!-- INCLUDE @phpbbseo_framework/acp_seo_footer.html -->

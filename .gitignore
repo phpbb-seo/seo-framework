@@ -1,0 +1,21 @@
+# Composer dependencies
+/vendor/
+composer.lock
+
+# Runtime compiled artifacts
+/store/compiled_routes.php
+
+# IDE & OS Artifacts
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs & Temporary Files
+*.log
+*.tmp
+*.bak
+
+# Testing & Coverage
+/tests/coverage/
+.phpunit.result.cache

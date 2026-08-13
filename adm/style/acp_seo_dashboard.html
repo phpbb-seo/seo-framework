@@ -1,0 +1,76 @@
+<!-- INCLUDE @phpbbseo_framework/acp_seo_header.html -->
+
+<div class="pseo-card">
+	<div class="pseo-card-header">
+		<h2 class="pseo-card-title">{L_SEO_STATUS_OVERVIEW}</h2>
+		<span class="pseo-badge pseo-badge--neutral">{L_SEO_EDITION_LITE}</span>
+	</div>
+	<div class="pseo-card-body">
+		<div class="pseo-grid-stats">
+			<div class="pseo-stat-item">
+				<span class="pseo-stat-label">{L_SEO_STATUS_FRAMEWORK}</span>
+				<div class="pseo-stat-value">
+					<!-- IF S_SEO_ENABLED -->
+						<span class="pseo-badge pseo-badge--success">{L_SEO_ENABLED}</span>
+					<!-- ELSE -->
+						<span class="pseo-badge pseo-badge--warning">{L_SEO_DISABLED}</span>
+					<!-- ENDIF -->
+				</div>
+			</div>
+
+			<div class="pseo-stat-item">
+				<span class="pseo-stat-label">{L_SEO_STATUS_REWRITE}</span>
+				<div class="pseo-stat-value">
+					<!-- IF S_REWRITE_ENABLED -->
+						<span class="pseo-badge pseo-badge--success">{L_SEO_ACTIVE}</span>
+					<!-- ELSE -->
+						<span class="pseo-badge pseo-badge--neutral">{L_SEO_INACTIVE}</span>
+					<!-- ENDIF -->
+				</div>
+			</div>
+
+			<div class="pseo-stat-item">
+				<span class="pseo-stat-label">{L_SEO_STATUS_CANONICAL}</span>
+				<div class="pseo-stat-value">
+					<span class="pseo-badge pseo-badge--success">{L_SEO_ACTIVE}</span>
+				</div>
+			</div>
+
+			<div class="pseo-stat-item">
+				<span class="pseo-stat-label">{L_SEO_STATUS_SLUG_INDEX}</span>
+				<div class="pseo-stat-value">
+					<span class="pseo-badge pseo-badge--success">{L_SEO_AVAILABLE}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="pseo-card">
+	<div class="pseo-card-header">
+		<h2 class="pseo-card-title">{L_SEO_CURRENT_PATTERNS}</h2>
+		<a class="pseo-btn pseo-btn--secondary" href="{U_ACTION_PERMALINKS}">{L_SEO_MANAGE_PERMALINKS}</a>
+	</div>
+	<div class="pseo-card-body">
+		<div class="pseo-grid-stats">
+			<div class="pseo-stat-item">
+				<span class="pseo-stat-label">{L_SEO_RES_FORUM}</span>
+				<div class="pseo-stat-value"><code>{PATTERN_FORUM}</code></div>
+			</div>
+			<div class="pseo-stat-item">
+				<span class="pseo-stat-label">{L_SEO_RES_TOPIC}</span>
+				<div class="pseo-stat-value"><code>{PATTERN_TOPIC}</code></div>
+			</div>
+			<div class="pseo-stat-item">
+				<span class="pseo-stat-label">{L_SEO_RES_MEMBER}</span>
+				<div class="pseo-stat-value"><code>{PATTERN_MEMBER}</code></div>
+			</div>
+			<div class="pseo-stat-item">
+				<span class="pseo-stat-label">{L_SEO_RES_GROUP}</span>
+				<div class="pseo-stat-value"><code>{PATTERN_GROUP}</code></div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- INCLUDE @phpbbseo_framework/acp_seo_footer.html -->

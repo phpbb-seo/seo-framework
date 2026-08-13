@@ -1,0 +1,173 @@
+<!-- INCLUDE @phpbbseo_framework/acp_seo_header.html -->
+
+<form id="pseo_titles_meta_form" method="post" action="{U_ACTION}">
+
+	<!-- IF S_ERROR -->
+	<div class="pseo-notice pseo-notice--error">
+		<span class="pseo-notice-icon">&#9888;</span>
+		<div>{ERROR_MSG}</div>
+	</div>
+	<!-- ENDIF -->
+
+	<!-- General / Home Settings Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_CARD_HOME}</h2>
+			<span class="pseo-badge pseo-badge--neutral">{L_SEO_NAV_LITE}</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="meta_enable">
+					<span>{L_SEO_META_ENABLE}</span>
+				</label>
+				<label style="display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer;">
+					<input type="checkbox" id="meta_enable" name="meta_enable" value="1" <!-- IF S_META_ENABLE -->checked="checked"<!-- ENDIF --> />
+					<span>{L_SEO_META_ENABLE_EXPLAIN}</span>
+				</label>
+			</div>
+
+			<div class="pseo-field" style="margin-top: 12px;">
+				<label class="pseo-label" for="home_title">
+					<span>{L_SEO_PATTERN_HOME_TITLE}</span>
+				</label>
+				<input type="text" id="home_title" name="home_title" value="{HOME_TITLE}" class="pseo-input-text" maxlength="255" />
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_BOARD_NAME}" data-target="home_title">{TOKEN_BOARD_NAME}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_SITE_DESC}" data-target="home_title">{TOKEN_SITE_DESC}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_home_title">{PREVIEW_HOME_TITLE}</span>
+				</div>
+			</div>
+
+			<div class="pseo-field" style="margin-top: 12px;">
+				<label class="pseo-label" for="home_desc">
+					<span>{L_SEO_HOME_DESC}</span>
+				</label>
+				<textarea id="home_desc" name="home_desc" class="pseo-input-text" rows="2" style="resize: vertical; font-family: inherit;">{HOME_DESC}</textarea>
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_BOARD_NAME}" data-target="home_desc">{TOKEN_BOARD_NAME}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_SITE_DESC}" data-target="home_desc">{TOKEN_SITE_DESC}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_home_desc">{PREVIEW_HOME_DESC}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Forum Titles Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_CARD_FORUMS}</h2>
+			<span class="pseo-badge pseo-badge--neutral">/forum/</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="forum_title">
+					<span>{L_SEO_PATTERN_FORUM_TITLE}</span>
+				</label>
+				<input type="text" id="forum_title" name="forum_title" value="{FORUM_TITLE}" class="pseo-input-text" maxlength="255" />
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_FORUM_NAME}" data-target="forum_title">{TOKEN_FORUM_NAME}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_BOARD_NAME}" data-target="forum_title">{TOKEN_BOARD_NAME}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_PAGE}" data-target="forum_title">{TOKEN_PAGE}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_forum_title">{PREVIEW_FORUM_TITLE}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Topic Titles & Meta Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_CARD_TOPICS}</h2>
+			<span class="pseo-badge pseo-badge--neutral">/topic/</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="topic_title">
+					<span>{L_SEO_PATTERN_TOPIC_TITLE}</span>
+				</label>
+				<input type="text" id="topic_title" name="topic_title" value="{TOPIC_TITLE}" class="pseo-input-text" maxlength="255" />
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_TOPIC_TITLE}" data-target="topic_title">{TOKEN_TOPIC_TITLE}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_FORUM_NAME}" data-target="topic_title">{TOKEN_FORUM_NAME}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_BOARD_NAME}" data-target="topic_title">{TOKEN_BOARD_NAME}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_PAGE}" data-target="topic_title">{TOKEN_PAGE}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_topic_title">{PREVIEW_TOPIC_TITLE}</span>
+				</div>
+			</div>
+
+			<div class="pseo-field" style="margin-top: 12px;">
+				<label class="pseo-label" for="desc_max_len">
+					<span>{L_SEO_DESC_MAX_LEN}</span>
+				</label>
+				<input type="number" id="desc_max_len" name="desc_max_len" value="{DESC_MAX_LEN}" min="50" max="500" class="pseo-input-text" style="max-width: 120px;" />
+			</div>
+		</div>
+	</div>
+
+	<!-- Member Profile Titles Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_CARD_MEMBERS}</h2>
+			<span class="pseo-badge pseo-badge--neutral">/member/</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="member_title">
+					<span>{L_SEO_PATTERN_MEMBER_TITLE}</span>
+				</label>
+				<input type="text" id="member_title" name="member_title" value="{MEMBER_TITLE}" class="pseo-input-text" maxlength="255" />
+				
+				<div class="pseo-chips-container">
+					<span class="pseo-chips-label">{L_SEO_VARIABLES}:</span>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_USERNAME}" data-target="member_title">{TOKEN_USERNAME}</button>
+					<button type="button" class="pseo-chip" data-token="{TOKEN_BOARD_NAME}" data-target="member_title">{TOKEN_BOARD_NAME}</button>
+				</div>
+
+				<div class="pseo-preview">
+					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
+					<span class="pseo-preview-url" id="preview_member_title">{PREVIEW_MEMBER_TITLE}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Sticky Action Bar -->
+	<div class="pseo-actions-bar">
+		<div class="pseo-actions-state">
+			<span id="pseo_status_indicator" style="display: none;">&#9679; {L_SEO_UNSAVED_CHANGES}</span>
+		</div>
+		<div class="pseo-actions-buttons">
+			<button type="submit" name="submit" value="1" class="pseo-btn pseo-btn--primary">
+				{L_SUBMIT}
+			</button>
+		</div>
+	</div>
+
+	{S_FORM_TOKEN}
+</form>
+
+<!-- INCLUDE @phpbbseo_framework/acp_seo_footer.html -->

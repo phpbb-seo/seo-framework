@@ -1,0 +1,26 @@
+phpbbseo_framework_sitemap_index:
+    path: /sitemap.xml
+    defaults: { _controller: phpbbseo.framework.controller.sitemap:indexAction }
+    methods: [GET, HEAD]
+
+phpbbseo_framework_sitemap_pages:
+    path: /sitemap-pages.xml
+    defaults: { _controller: phpbbseo.framework.controller.sitemap:pagesAction }
+    methods: [GET, HEAD]
+
+phpbbseo_framework_sitemap_forums:
+    path: /sitemap-forums.xml
+    defaults: { _controller: phpbbseo.framework.controller.sitemap:forumsAction }
+    methods: [GET, HEAD]
+
+phpbbseo_framework_sitemap_topics:
+    path: /sitemap-topics-{page}.xml
+    defaults: { _controller: phpbbseo.framework.controller.sitemap:topicsAction }
+    requirements:
+        page: '\d+'
+    methods: [GET, HEAD]
+
+phpbbseo_framework_sitemap_xsl:
+    path: /sitemap.xsl
+    defaults: { _controller: phpbbseo.framework.controller.sitemap:xslAction }
+    methods: [GET, HEAD]
