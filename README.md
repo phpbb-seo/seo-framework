@@ -115,6 +115,15 @@ phpBB SEO Framework is architected with a unified Shared Core foundation:
 
 ---
 
+## Migrating from Legacy USU
+
+* Existing **Ultimate SEO URL (USU)** installations should **NOT** replace USU blindly.
+* USU and phpBB SEO Framework use fundamentally different internal architectures.
+* A documented migration path will be provided separately in an upcoming guide.
+* For existing installations depending on historical USU URLs, maintain the legacy repository at [https://github.com/phpbb-seo/usu](https://github.com/phpbb-seo/usu).
+
+---
+
 ## Documentation & Support
 
 * **Official Website**: [https://www.phpbbseo.ir/](https://www.phpbbseo.ir/)
