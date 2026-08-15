@@ -356,6 +356,24 @@ class SeoListener implements EventSubscriberInterface
 
     public function onPageHeader($event): void
     {
+        try {
+            $this->user->add_lang_ext('phpbbseo/framework', 'acp_seo');
+            $poweredByFormat = $this->user->lang('SEO_POWERED_BY');
+            if (empty($poweredByFormat) || !str_contains($poweredByFormat, '%s')) {
+                $poweredByFormat = 'Powered by %s';
+            }
+            $brandLink = '<a href="https://www.phpbbseo.com/" rel="nofollow">phpBB SEO</a>';
+            $this->template->assign_vars([
+                'S_SEO_FOOTER_ATTRIBUTION' => true,
+                'L_SEO_POWERED_BY'         => sprintf($poweredByFormat, $brandLink),
+            ]);
+        } catch (\Throwable) {
+            $this->template->assign_vars([
+                'S_SEO_FOOTER_ATTRIBUTION' => true,
+                'L_SEO_POWERED_BY'         => 'Powered by <a href="https://www.phpbbseo.com/" rel="nofollow">phpBB SEO</a>',
+            ]);
+        }
+
         if (!$this->configProvider->isRewriteEnabled()) {
             return;
         }
@@ -407,17 +425,6 @@ class SeoListener implements EventSubscriberInterface
                 (int) $GLOBALS['forum_id'] => (string) $GLOBALS['forum_data']['forum_name']
             ]);
         }
-
-        $this->user->add_lang_ext('phpbbseo/framework', 'acp_seo');
-        $poweredByFormat = $this->user->lang('SEO_POWERED_BY');
-        if (empty($poweredByFormat) || !str_contains($poweredByFormat, '%s')) {
-            $poweredByFormat = 'Powered by %s';
-        }
-        $brandLink = '<a href="https://www.phpbbseo.com/" rel="nofollow">phpBB SEO</a>';
-        $this->template->assign_vars([
-            'S_SEO_FOOTER_ATTRIBUTION' => true,
-            'L_SEO_POWERED_BY'         => sprintf($poweredByFormat, $brandLink),
-        ]);
 
         $context = $this->contextFactory->createFromPhpbbRequest($this->request);
         $canonicalUrl = $this->canonicalResolver->resolve($context);
