@@ -70,7 +70,7 @@ Modern SEO infrastructure for phpBB.
 
 ## Installation
 
-1. Download the latest `phpbb-seo-lite-1.0.1.zip` from the [Releases](https://github.com/phpbb-seo/seo-framework/releases) page.
+1. Download the latest `phpbb-seo-lite-x.x.x.zip` from the [Releases](https://github.com/phpbb-seo/seo-framework/releases) page.
 
 2. Extract and upload the extension so the final path is:
    ```
