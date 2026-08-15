@@ -33,8 +33,13 @@ $lang = array_merge($lang, [
     'SEO_NAV_ANALYZER'          => 'SEO Analyzer',
 
     // Dashboard View
-    'SEO_DASHBOARD_TITLE'       => 'SEO Framework Dashboard',
-    'SEO_STATUS_OVERVIEW'       => 'System Status',
+    'SEO_DASHBOARD_TITLE'            => 'SEO Framework Dashboard',
+    'SEO_GENERAL_SETTINGS'           => 'General Settings',
+    'SEO_FOOTER_ATTRIBUTION'         => 'Footer Attribution',
+    'SEO_FOOTER_ATTRIBUTION_EXPLAIN' => 'Display a clean, minimal "Powered by phpBB SEO" link in the board footer.',
+    'SEO_DASHBOARD_SAVED'            => 'Dashboard settings have been updated successfully.',
+    'SEO_POWERED_BY'                 => 'Powered by %s',
+    'SEO_STATUS_OVERVIEW'            => 'System Status',
     'SEO_STATUS_FRAMEWORK'      => 'SEO Framework',
     'SEO_STATUS_REWRITE'        => 'URL Rewriting',
     'SEO_STATUS_CANONICAL'      => 'Canonical Engine',

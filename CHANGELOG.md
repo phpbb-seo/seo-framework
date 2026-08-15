@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-08-15
+
+### Changed
+* **Official Branding & Domain**:
+  * Updated official project website to [https://www.phpbbseo.com/](https://www.phpbbseo.com/).
+* **Footer Attribution Setting**:
+  * Added ACP configuration toggle `seo_footer_attribution_enable` (default: Enabled) under General Settings on the SEO Dashboard.
+  * Implemented native phpBB template event `overall_footer_copyright_append.html` rendering `Powered by phpBB SEO` with `rel="nofollow"`.
+  * Verified 0 attribution HTML output when disabled in ACP.
+
+---
+
 ## [1.0.0] - 2026-08-14
 
 ### Initial Public Release — phpBB SEO Lite 1.0.0

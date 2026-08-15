@@ -1,15 +1,15 @@
 {
     "name": "phpbbseo/framework",
     "type": "phpbb-extension",
-    "description": "Modern SEO framework for phpBB with SEO-friendly URLs, canonical URLs, titles & meta, XML sitemaps and extensible SEO infrastructure.",
-    "homepage": "https://www.phpbbseo.ir/",
-    "version": "1.0.0",
-    "time": "2026-08-14",
+    "description": "Modern SEO extension for phpBB with SEO-friendly URLs, canonical URLs, titles & meta, XML sitemaps and multilingual support.",
+    "homepage": "https://www.phpbbseo.com/",
+    "version": "1.0.1",
+    "time": "2026-08-15",
     "license": "GPL-2.0-only",
     "authors": [
         {
             "name": "phpBB SEO",
-            "homepage": "https://www.phpbbseo.ir/",
+            "homepage": "https://www.phpbbseo.com/",
             "role": "Developer"
         }
     ],

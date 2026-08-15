@@ -142,6 +142,7 @@ services:
             - '@phpbbseo.framework.rewrite.slug_repository'
             - '@phpbbseo.framework.url.pagination_resolver'
             - '@template'
+            - '@user'
         tags:
             - { name: event.listener }
 

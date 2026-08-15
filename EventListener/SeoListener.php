@@ -34,7 +34,8 @@ class SeoListener implements EventSubscriberInterface
         private readonly request_interface $request,
         private readonly SlugRepository $slugRepository,
         private readonly PaginationResolver $paginationResolver,
-        private readonly template $template
+        private readonly template $template,
+        private readonly \phpbb\user $user
     ) {}
 
     public static function getSubscribedEvents(): array
@@ -406,6 +407,17 @@ class SeoListener implements EventSubscriberInterface
                 (int) $GLOBALS['forum_id'] => (string) $GLOBALS['forum_data']['forum_name']
             ]);
         }
+
+        $this->user->add_lang_ext('phpbbseo/framework', 'acp_seo');
+        $poweredByFormat = $this->user->lang('SEO_POWERED_BY');
+        if (empty($poweredByFormat) || !str_contains($poweredByFormat, '%s')) {
+            $poweredByFormat = 'Powered by %s';
+        }
+        $brandLink = '<a href="https://www.phpbbseo.com/" rel="nofollow">phpBB SEO</a>';
+        $this->template->assign_vars([
+            'S_SEO_FOOTER_ATTRIBUTION' => true,
+            'L_SEO_POWERED_BY'         => sprintf($poweredByFormat, $brandLink),
+        ]);
 
         $context = $this->contextFactory->createFromPhpbbRequest($this->request);
         $canonicalUrl = $this->canonicalResolver->resolve($context);
