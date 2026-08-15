@@ -22,28 +22,37 @@ class PlainTextNormalizer
             return '';
         }
 
-        // 1. Remove quote blocks and code blocks with their contents if present
-        $clean = preg_replace('#\[quote(?:="?[^"\]]*"?)?\][\s\S]*?\[/quote\]#ui', '', $text) ?? $text;
-        $clean = preg_replace('#\[code(?:="?[^"\]]*"?)?\][\s\S]*?\[/code\]#ui', '', $clean) ?? $clean;
-        $clean = preg_replace('#\[attachment=.*?\][\s\S]*?\[/attachment\]#ui', '', $clean) ?? $clean;
+        $clean = $text;
 
-        // 2. Use phpBB native strip_bbcode if available, otherwise strip remaining BBCode tags
-        if (function_exists('strip_bbcode')) {
-            strip_bbcode($clean);
+        // Check if content is s9e TextFormatter XML (<r>...</r>, <t>...</t>, <m>...</m>)
+        $isXml = str_starts_with($clean, '<r') || str_starts_with($clean, '<t') || str_starts_with($clean, '<m');
+
+        if ($isXml) {
+            // Strip quote, code, and attachment XML blocks with their inner text
+            $clean = preg_replace('#<QUOTE[\s\S]*?</QUOTE>#ui', '', $clean) ?? $clean;
+            $clean = preg_replace('#<CODE[\s\S]*?</CODE>#ui', '', $clean) ?? $clean;
+            $clean = preg_replace('#<ATTACHMENT[\s\S]*?</ATTACHMENT>#ui', '', $clean) ?? $clean;
+            $clean = preg_replace('#<e>[^<]*</e>#ui', '', $clean) ?? $clean;
+            $clean = preg_replace('#<s>[^<]*</s>#ui', '', $clean) ?? $clean;
+        } else {
+            // Strip raw BBCode quote, code, and attachment blocks
+            $clean = preg_replace('#\[quote(?:="?[^"\]]*"?)?\][\s\S]*?\[/quote\]#ui', '', $clean) ?? $clean;
+            $clean = preg_replace('#\[code(?:="?[^"\]]*"?)?\][\s\S]*?\[/code\]#ui', '', $clean) ?? $clean;
+            $clean = preg_replace('#\[attachment=.*?\][\s\S]*?\[/attachment\]#ui', '', $clean) ?? $clean;
+            $clean = preg_replace('#\[/?[a-z0-9\*\+\-]+(?:=[^\]]*)?\]#ui', '', $clean) ?? $clean;
         }
-        $clean = preg_replace('#\[/?[a-z0-9\*\+\-]+(?:=[^\]]*)?\]#ui', '', $clean) ?? $clean;
 
-        // 3. Strip HTML tags
+        // Strip HTML / XML tags
         $clean = strip_tags($clean);
 
-        // 4. Decode HTML entities to clean raw Unicode
+        // Decode HTML entities to clean raw Unicode
         $clean = html_entity_decode($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        // 5. Normalize multiple whitespace and linebreaks to single spaces
+        // Normalize multiple whitespace and linebreaks to single spaces
         $clean = preg_replace('#[\r\n\t\s]+#u', ' ', $clean) ?? $clean;
         $clean = trim($clean);
 
-        // 6. Multibyte-safe Unicode truncation at word boundary
+        // Multibyte-safe Unicode truncation at word boundary
         if ($maxLength > 0 && mb_strlen($clean, 'UTF-8') > $maxLength) {
             $truncated = mb_substr($clean, 0, $maxLength, 'UTF-8');
             // Try to break at the last space if reasonable

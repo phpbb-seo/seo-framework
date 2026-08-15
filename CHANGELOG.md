@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.2] - 2026-08-15
+
+### Fixed
+* **Inbound Route Lifecycle Resilience**:
+  * Fixed inbound SEO URLs returning 404 after extension disable/re-enable or delete data/reinstall cycles.
+  * Added automatic recovery and persistence of missing compiled route cache on first request without requiring manual ACP intervention.
+  * Improved extension lifecycle reliability with fail-safe route dumping in `enable_step` and clean disabled markers in `disable_step`.
+* **BBCode & TextFormatter Sanitization**:
+  * Fixed `s9e/text-formatter` XML warnings (`DOMDocument::loadXML() tag mismatch` and `textContent on null`) during BBCode posting and previewing by safely parsing XML structures separately from raw BBCode.
+
 ### Added
 * **Official Nginx Support**:
   * Added and verified minimal Nginx `try_files` configuration snippets for both domain-root and subdirectory installations.
