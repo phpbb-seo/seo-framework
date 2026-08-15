@@ -10,12 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1] - 2026-08-15
 
 ### Changed
+* **Standalone Extension-Only Rewrite Entrypoint**:
+  * Redesigned `rewrite.php` to reside exclusively inside `ext/phpbbseo/framework/rewrite.php`.
+  * Completely eliminated the installation requirement to copy `rewrite.php` to the phpBB root directory.
+  * Deterministic phpBB root filesystem discovery via `__DIR__` with safe failover.
+  * Preserved full public `REQUEST_URI` and context mapping for canonical resolution without path leaks.
 * **Official Branding & Domain**:
   * Updated official project website to [https://www.phpbbseo.com/](https://www.phpbbseo.com/).
-* **Footer Attribution Setting**:
-  * Added ACP configuration toggle `seo_footer_attribution_enable` (default: Enabled) under General Settings on the SEO Dashboard.
+* **Direct Footer Attribution**:
   * Implemented native phpBB template event `overall_footer_copyright_append.html` rendering `Powered by phpBB SEO` with `rel="nofollow"`.
-  * Verified 0 attribution HTML output when disabled in ACP.
 
 ---
 

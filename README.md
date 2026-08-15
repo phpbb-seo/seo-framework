@@ -70,17 +70,30 @@ Modern SEO infrastructure for phpBB.
 
 ## Installation
 
-1. Download the latest release package (`phpbb-seo-lite-1.0.1.zip`) from the [Releases](https://github.com/phpbb-seo/seo-framework/releases) page.
-2. Unpack the archive and copy the folder contents to your phpBB board directory at:
+1. Download the latest `phpbb-seo-lite-1.0.1.zip` from the [Releases](https://github.com/phpbb-seo/seo-framework/releases) page.
+
+2. Extract and upload the extension so the final path is:
    ```
    ext/phpbbseo/framework/
    ```
-3. Copy `ext/phpbbseo/framework/rewrite.php` to your **phpBB root directory** (in the same directory as `app.php` and `index.php`).
-4. Ensure standard phpBB `.htaccess` URL rewrite rules are active in your phpBB root.
-5. In your phpBB Administration Control Panel (ACP), navigate to:
+
+3. Add the following rules to the phpBB root `.htaccess` file:
+   ```apache
+   <IfModule mod_rewrite.c>
+       RewriteEngine On
+
+       RewriteCond %{REQUEST_FILENAME} !-f
+       RewriteCond %{REQUEST_FILENAME} !-d
+       RewriteRule ^(.*)$ ext/phpbbseo/framework/rewrite.php [QSA,L]
+   </IfModule>
+   ```
+
+4. In your phpBB Administration Control Panel (ACP), navigate to:
    **Customise** &raquo; **Manage Extensions**
-6. Locate **phpBB SEO Framework** under *Disabled Extensions* and click **Enable**.
-7. Navigate to the new **SEO Framework** tab in the ACP to configure your settings.
+
+5. Locate **phpBB SEO Framework** under *Disabled Extensions* and click **Enable**.
+
+6. Navigate to the new **SEO Framework** tab in the ACP to configure your settings.
 
 ---
 

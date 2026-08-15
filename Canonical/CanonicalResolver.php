@@ -68,7 +68,8 @@ class CanonicalResolver
                     $start = $this->paginationResolver->pageToStart($route->page, $postsPerPage);
                     return $this->permalinkProfile->generateTopicPageUrl($route->id, $start, $postsPerPage);
                 }
-                return $this->permalinkProfile->detectStaleTopic($route->id, $route->slug);
+                $staleUrl = $this->permalinkProfile->detectStaleTopic($route->id, $route->slug);
+                return $staleUrl ?? $this->permalinkProfile->generateTopicUrl($route->id);
 
             case 'forum':
                 if ($route->page !== null && $route->page > 1) {
@@ -76,13 +77,16 @@ class CanonicalResolver
                     $start = $this->paginationResolver->pageToStart($route->page, $topicsPerPage);
                     return $this->permalinkProfile->generateForumPageUrl($route->id, $start, $topicsPerPage);
                 }
-                return $this->permalinkProfile->detectStaleForum($route->id, $route->slug);
+                $staleUrl = $this->permalinkProfile->detectStaleForum($route->id, $route->slug);
+                return $staleUrl ?? $this->permalinkProfile->generateForumUrl($route->id);
 
             case 'member':
-                return $this->permalinkProfile->detectStaleMember($route->id, $route->slug);
+                $staleUrl = $this->permalinkProfile->detectStaleMember($route->id, $route->slug);
+                return $staleUrl ?? $this->permalinkProfile->generateMemberUrl($route->id);
 
             case 'group':
-                return $this->permalinkProfile->detectStaleGroup($route->id, $route->slug);
+                $staleUrl = $this->permalinkProfile->detectStaleGroup($route->id, $route->slug);
+                return $staleUrl ?? $this->permalinkProfile->generateGroupUrl($route->id);
         }
 
         return null;

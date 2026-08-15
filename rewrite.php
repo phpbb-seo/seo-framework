@@ -6,13 +6,33 @@
  * Matches inbound SEO URLs using ultra-fast compiled route cache.
  * Preserves public SEO REQUEST_URI for canonical checks while normalizing internal
  * execution server context so phpBB calculates root asset paths as "./".
+ *
+ * Resides exclusively at: ext/phpbbseo/framework/rewrite.php
+ * Deterministically resolves phpBB root from __DIR__ without requiring root file copies.
  */
 
-$phpbb_root_path = (defined('PHPBB_ROOT_PATH')) ? PHPBB_ROOT_PATH : './';
+// 1. Deterministically resolve phpBB installation root filesystem path from __DIR__
+$rawRoot = realpath(__DIR__ . '/../../../');
+if ($rawRoot === false || !is_file($rawRoot . '/common.php') || !is_file($rawRoot . '/app.php')) {
+    http_response_code(500);
+    echo 'Error: Unable to locate phpBB installation root from SEO rewrite handler.';
+    exit;
+}
+
+$phpbbRootPath = rtrim(str_replace('\\', '/', $rawRoot), '/') . '/';
+
+// 2. Ensure current working directory is the phpBB installation root
+@chdir($phpbbRootPath);
+
+$phpbb_root_path = './';
 $phpEx = 'php';
 
-$storeDir = $phpbb_root_path . 'ext/phpbbseo/framework/store/';
-$cacheFile = $storeDir . 'compiled_routes.php';
+// Enable phpBB native board-root URL asset resolution for clean SEO paths
+if (!defined('PHPBB_USE_BOARD_URL_PATH')) {
+    define('PHPBB_USE_BOARD_URL_PATH', true);
+}
+
+$cacheFile = __DIR__ . '/store/compiled_routes.php';
 
 // Safe hardcoded target script map (Security rule: user input NEVER reaches include path)
 $targetScripts = [
@@ -30,14 +50,15 @@ if (file_exists($cacheFile)) {
         $path = ($qPos !== false) ? substr($rawUri, 0, $qPos) : $rawUri;
         $path = rawurldecode($path);
 
-        // Normalize board path prefix (e.g. "/phpbb/topic/..." -> "/topic/...")
-        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $boardDir = rtrim(dirname($scriptName), '/\\');
-        if ($boardDir === '\\') {
-            $boardDir = '';
-        }
-        if ($boardDir !== '' && $boardDir !== '/' && str_starts_with($path, $boardDir)) {
-            $path = '/' . ltrim(substr($path, strlen($boardDir)), '/');
+        // Determine board web path prefix (e.g. "/phpbb/ext/..." -> "/phpbb", "/ext/..." -> "")
+        $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+        $extSubPath = '/ext/phpbbseo/framework/rewrite.php';
+        $pos = strrpos($scriptName, $extSubPath);
+        $boardDir = ($pos !== false) ? substr($scriptName, 0, $pos) : '';
+        $boardDir = rtrim($boardDir, '/');
+
+        if ($boardDir !== '' && str_starts_with($path, $boardDir . '/')) {
+            $path = substr($path, strlen($boardDir));
         }
 
         foreach ($routes as $route) {
@@ -89,14 +110,14 @@ if (file_exists($cacheFile)) {
                     $internalQuery = http_build_query($_GET);
 
                     // 3. Normalize internal phpBB execution context so path_helper calculates web_root_path as "./"
-                    $internalScript = ($boardDir !== '' && $boardDir !== '/') ? $boardDir . '/' . $targetScript : '/' . $targetScript;
+                    $internalScript = ($boardDir !== '') ? $boardDir . '/' . $targetScript : '/' . $targetScript;
                     $_SERVER['SCRIPT_NAME']     = $internalScript;
                     $_SERVER['PHP_SELF']        = $internalScript;
-                    $_SERVER['SCRIPT_FILENAME'] = $phpbb_root_path . $targetScript;
+                    $_SERVER['SCRIPT_FILENAME'] = $phpbbRootPath . $targetScript;
                     $_SERVER['REQUEST_URI']     = $internalScript . ($internalQuery !== '' ? '?' . $internalQuery : '');
                     $_SERVER['PATH_INFO']       = '';
 
-                    require $phpbb_root_path . $targetScript;
+                    require $phpbbRootPath . $targetScript;
                     exit;
                 }
             }
@@ -104,6 +125,11 @@ if (file_exists($cacheFile)) {
     }
 }
 
-// Unmatched requests (e.g. extension routes, app.php/help/faq) pass to app.php ONCE
-require $phpbb_root_path . 'app.php';
+// Unmatched requests (e.g. extension routes, /sitemap.xml, /app.php/help/faq) pass to app.php
+$appScript = ($boardDir ?? '') !== '' ? $boardDir . '/app.php' : '/app.php';
+$_SERVER['SCRIPT_NAME']     = $appScript;
+$_SERVER['PHP_SELF']        = $appScript;
+$_SERVER['SCRIPT_FILENAME'] = $phpbbRootPath . 'app.php';
+
+require $phpbbRootPath . 'app.php';
 exit;
