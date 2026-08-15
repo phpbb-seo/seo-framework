@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-08-16
+
+### Fixed
+* **Multi-Page Topic & Forum Pagination**:
+  * Fixed inbound pagination navigation returning page 1 or 404 on multi-page forum and topic SEO URLs by resolving the `$start` offset early inside `core.common` before phpBB controller variable initialization.
+  * Added bidirectional support and routing aliases for both `/page/{page}/` and `/page-{page}/` pagination permalink patterns.
+  * Subscribed to `core.pagination_generate_page_link` to cleanly rewrite all template page number links into friendly SEO URLs directly in HTML output.
+  * Fixed trailing slash regex duplication in `RouteCacheCompiler` that prevented matching route patterns ending with a slash.
+  * Normalized relative and board-prefixed URLs in `PublicResourceUrlResolver` during pagination link resolution.
+
+### Changed
+* **Generic Documentation**:
+  * Cleaned up hardcoded version numbers in `README.md` Overview and feature comparison tables.
+
+---
+
 ## [1.0.2] - 2026-08-15
 
 ### Fixed

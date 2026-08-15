@@ -21,8 +21,10 @@ class ext extends \phpbb\extension\base
                 // Default routes fallback to ensure immediate routing availability
                 $defaultRoutes = [
                     ['regex' => '#^/topic/(?P<slug>[^/]+)-(?P<id>[0-9]+)/page/(?P<page>[0-9]+)/?$#u', 'resource' => 'topic', 'is_page' => true],
+                    ['regex' => '#^/topic/(?P<slug>[^/]+)-(?P<id>[0-9]+)/page-(?P<page>[0-9]+)/?$#u', 'resource' => 'topic', 'is_page' => true],
                     ['regex' => '#^/topic/(?P<slug>[^/]+)-(?P<id>[0-9]+)/?$#u', 'resource' => 'topic', 'is_page' => false],
                     ['regex' => '#^/forum/(?P<slug>[^/]+)-(?P<id>[0-9]+)/page/(?P<page>[0-9]+)/?$#u', 'resource' => 'forum', 'is_page' => true],
+                    ['regex' => '#^/forum/(?P<slug>[^/]+)-(?P<id>[0-9]+)/page-(?P<page>[0-9]+)/?$#u', 'resource' => 'forum', 'is_page' => true],
                     ['regex' => '#^/forum/(?P<slug>[^/]+)-(?P<id>[0-9]+)/?$#u', 'resource' => 'forum', 'is_page' => false],
                     ['regex' => '#^/member/(?P<slug>[^/]+)-(?P<id>[0-9]+)/?$#u', 'resource' => 'member', 'is_page' => false],
                     ['regex' => '#^/group/(?P<slug>[^/]+)-(?P<id>[0-9]+)/?$#u', 'resource' => 'group', 'is_page' => false],

@@ -51,6 +51,23 @@ class RouteCacheCompiler
                     'resource' => $baseResource,
                     'is_page'  => str_contains($key, '_page'),
                 ];
+
+                // Support both /page/{page}/ and /page-{page}/ inbound styles
+                if (str_contains($patterns[$key], 'page/{page}')) {
+                    $alt = str_replace('page/{page}', 'page-{page}', $patterns[$key]);
+                    $routes[] = [
+                        'regex'    => $this->patternToRouteRegex($alt),
+                        'resource' => $baseResource,
+                        'is_page'  => true,
+                    ];
+                } elseif (str_contains($patterns[$key], 'page-{page}')) {
+                    $alt = str_replace('page-{page}', 'page/{page}', $patterns[$key]);
+                    $routes[] = [
+                        'regex'    => $this->patternToRouteRegex($alt),
+                        'resource' => $baseResource,
+                        'is_page'  => true,
+                    ];
+                }
             }
         }
 
@@ -114,6 +131,7 @@ class RouteCacheCompiler
         $regex = preg_replace('/\{page\}/', '(?P<page>[0-9]+)', $regex);
         $regex = preg_replace('/\{slug\}/', '(?P<slug>[^/]+)', $regex);
 
-        return '#^/' . ltrim(trim($regex, '#^$'), '/') . '/?$#u';
+        $cleanRegex = rtrim(ltrim(trim($regex, '#^$'), '/'), '/');
+        return '#^/' . $cleanRegex . '/?$#u';
     }
 }

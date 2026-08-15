@@ -79,10 +79,13 @@ class PublicResourceUrlResolver
         if (!in_array($script, $allowedScripts, true)) {
             if (isset($parsedParams['start'])) {
                 $boardPath = $this->getBoardPath();
-                $path = parse_url($url, PHP_URL_PATH) ?? '';
-                if ($boardPath !== '/' && str_starts_with($path, $boardPath)) {
-                    $path = '/' . substr($path, strlen($boardPath));
+                $rawPath = parse_url($url, PHP_URL_PATH) ?? '';
+                $cleanPath = '/' . ltrim(ltrim($rawPath, '.'), '/');
+                $boardPrefix = rtrim($boardPath, '/');
+                if ($boardPrefix !== '' && str_starts_with($cleanPath, $boardPrefix . '/')) {
+                    $cleanPath = substr($cleanPath, strlen($boardPrefix));
                 }
+                $path = '/' . ltrim($cleanPath, '/');
 
                 // Check if it matches an already SEO-formatted topic URL
                 $match = $this->permalinkProfile->matchTopic($path);

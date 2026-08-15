@@ -5,13 +5,13 @@ Modern SEO infrastructure for phpBB.
 [![phpBB Version](https://img.shields.io/badge/phpBB-3.3.x-blue.svg)](https://www.phpbb.com/)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%20%7C%208.2%20%7C%208.3-777bb4.svg)](https://php.net/)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL--2.0--only-green.svg)](LICENSE)
-[![Latest Release](https://img.shields.io/badge/Release-v1.0.1-blue.svg)](https://github.com/phpbb-seo/seo-framework/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/phpbb-seo/seo-framework.svg)](https://github.com/phpbb-seo/seo-framework/releases)
 
 ---
 
 ## Overview
 
-**phpBB SEO Framework (Lite Edition v1.0.1)** is the official next-generation search engine optimization platform for phpBB 3.3.x boards. Built for high performance, clean software architecture, and web standards compliance, it provides a zero-SQL hot-path URL rewrite engine, dynamic metadata tools, and a keyset-based XML sitemap suite.
+**phpBB SEO Framework (Lite Edition)** is the official next-generation search engine optimization platform for phpBB 3.3.x boards. Built for high performance, clean software architecture, and web standards compliance, it provides a zero-SQL hot-path URL rewrite engine, dynamic metadata tools, and a keyset-based XML sitemap suite.
 
 * **Official Website**: [https://www.phpbbseo.com/](https://www.phpbbseo.com/)
 * **GitHub Repository**: [https://github.com/phpbb-seo/seo-framework](https://github.com/phpbb-seo/seo-framework)
@@ -132,7 +132,7 @@ Modern SEO infrastructure for phpBB.
 
 phpBB SEO Framework is architected with a unified Shared Core foundation:
 
-| Feature / Module | phpBB SEO Lite (v1.0.1) | phpBB SEO Pro (Planned) |
+| Feature / Module | phpBB SEO Lite | phpBB SEO Pro (Planned) |
 | :--- | :---: | :---: |
 | **Shared Core SEO URL Engine** | ✅ Included | ✅ Included |
 | **Persistent Slug Index** | ✅ Included | ✅ Included |

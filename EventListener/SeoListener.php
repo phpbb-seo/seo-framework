@@ -41,6 +41,8 @@ class SeoListener implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
+            // Early inbound pagination start resolution (before viewforum/viewtopic reads $start)
+            'core.common'                               => ['onCommon', 1000],
             // Early inbound rewriting & global preloading
             'core.user_setup'                           => ['onUserSetup', 1000],
             // Board Index forum list preloading
@@ -57,6 +59,8 @@ class SeoListener implements EventSubscriberInterface
             'core.page_header'                          => 'onPageHeader',
             // Outbound URL rewriting hook
             'core.append_sid'                           => 'onAppendSid',
+            // Native phpBB template pagination rewriting
+            'core.pagination_generate_page_link'        => 'onPaginationGeneratePageLink',
             // Rename & delete database synchronization (write operations)
             'core.submit_post_end'                      => 'onSubmitPostEnd',
             'core.delete_topics_after_query'            => 'onDeleteTopicsAfter',
@@ -75,13 +79,12 @@ class SeoListener implements EventSubscriberInterface
     // INBOUND: Intercept pretty URLs early in phpBB lifecycle & preload static resources
     // -------------------------------------------------------------------------
 
-    public function onUserSetup($event): void
+    public function onCommon($event): void
     {
         if (!$this->configProvider->isRewriteEnabled()) {
             return;
         }
 
-        // 1. Process dynamic inbound pagination if passed from pre-bootstrap rewrite.php
         $seoPage = (int) $this->request->variable('seo_page', 0, false, request_interface::GET);
         if ($seoPage > 1) {
             $topicId = (int) $this->request->variable('t', 0, false, request_interface::GET);
@@ -91,17 +94,45 @@ class SeoListener implements EventSubscriberInterface
                 $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
                 $start = $this->paginationResolver->pageToStart($seoPage, $postsPerPage);
                 if ($start > 0) {
-                    $this->request->overwrite('start', (string) $start, request_interface::GET);
-                    $_GET['start'] = (string) $start;
-                    $_REQUEST['start'] = (string) $start;
+                    $this->request->overwrite('start', $start, request_interface::GET);
+                    $this->request->overwrite('start', $start, request_interface::REQUEST);
                 }
             } elseif ($forumId > 0) {
                 $topicsPerPage = (int) $this->configProvider->get('topics_per_page', '50');
                 $start = $this->paginationResolver->pageToStart($seoPage, $topicsPerPage);
                 if ($start > 0) {
-                    $this->request->overwrite('start', (string) $start, request_interface::GET);
-                    $_GET['start'] = (string) $start;
-                    $_REQUEST['start'] = (string) $start;
+                    $this->request->overwrite('start', $start, request_interface::GET);
+                    $this->request->overwrite('start', $start, request_interface::REQUEST);
+                }
+            }
+        }
+    }
+
+    public function onUserSetup($event): void
+    {
+        if (!$this->configProvider->isRewriteEnabled()) {
+            return;
+        }
+
+        // Process dynamic inbound pagination if passed from pre-bootstrap rewrite.php (fallback)
+        $seoPage = (int) $this->request->variable('seo_page', 0, false, request_interface::GET);
+        if ($seoPage > 1) {
+            $topicId = (int) $this->request->variable('t', 0, false, request_interface::GET);
+            $forumId = (int) $this->request->variable('f', 0, false, request_interface::GET);
+
+            if ($topicId > 0) {
+                $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
+                $start = $this->paginationResolver->pageToStart($seoPage, $postsPerPage);
+                if ($start > 0) {
+                    $this->request->overwrite('start', $start, request_interface::GET);
+                    $this->request->overwrite('start', $start, request_interface::REQUEST);
+                }
+            } elseif ($forumId > 0) {
+                $topicsPerPage = (int) $this->configProvider->get('topics_per_page', '50');
+                $start = $this->paginationResolver->pageToStart($seoPage, $topicsPerPage);
+                if ($start > 0) {
+                    $this->request->overwrite('start', $start, request_interface::GET);
+                    $this->request->overwrite('start', $start, request_interface::REQUEST);
                 }
             }
         }
@@ -471,6 +502,29 @@ class SeoListener implements EventSubscriberInterface
 
         if ($seoUrl !== null) {
             $event['append_sid_overwrite'] = $seoUrl;
+        }
+    }
+
+    public function onPaginationGeneratePageLink($event): void
+    {
+        if (!$this->configProvider->isRewriteEnabled()) {
+            return;
+        }
+
+        $baseUrl = $event['base_url'] ?? '';
+        $onPage = (int) ($event['on_page'] ?? 1);
+        $perPage = (int) ($event['per_page'] ?? 0);
+
+        if (!is_string($baseUrl) || $perPage <= 0) {
+            return;
+        }
+
+        $start = ($onPage > 1) ? ($onPage - 1) * $perPage : 0;
+        $params = ($start > 0) ? "start=$start" : '';
+
+        $resolved = $this->urlResolver->resolve($baseUrl, $params);
+        if ($resolved !== null) {
+            $event['generate_page_link_override'] = $resolved;
         }
     }
 

@@ -22,9 +22,9 @@ class PermalinkConfiguration
     private const PRESETS = [
         'modern' => [
             'forum'      => '/forum/{slug}-{id}/',
-            'forum_page' => '/forum/{slug}-{id}/page-{page}/',
+            'forum_page' => '/forum/{slug}-{id}/page/{page}/',
             'topic'      => '/topic/{slug}-{id}/',
-            'topic_page' => '/topic/{slug}-{id}/page-{page}/',
+            'topic_page' => '/topic/{slug}-{id}/page/{page}/',
             'member'     => '/member/{slug}-{id}/',
             'group'      => '/group/{slug}-{id}/',
         ],

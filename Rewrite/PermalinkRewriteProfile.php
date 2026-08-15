@@ -17,8 +17,10 @@ class PermalinkRewriteProfile
 {
     private CompiledUrlPattern $forumPattern;
     private CompiledUrlPattern $forumPagePattern;
+    private CompiledUrlPattern $forumPageAltPattern;
     private CompiledUrlPattern $topicPattern;
     private CompiledUrlPattern $topicPagePattern;
+    private CompiledUrlPattern $topicPageAltPattern;
     private CompiledUrlPattern $memberPattern;
     private CompiledUrlPattern $groupPattern;
 
@@ -36,11 +38,23 @@ class PermalinkRewriteProfile
     private function compilePatterns(): void
     {
         $this->forumPattern     = $this->compiler->compile($this->permalinkConfig->getPattern('forum'), ['id']);
-        $this->forumPagePattern = $this->compiler->compile($this->permalinkConfig->getPattern('forum_page'), ['id', 'page']);
         $this->topicPattern     = $this->compiler->compile($this->permalinkConfig->getPattern('topic'), ['id']);
-        $this->topicPagePattern = $this->compiler->compile($this->permalinkConfig->getPattern('topic_page'), ['id', 'page']);
         $this->memberPattern    = $this->compiler->compile($this->permalinkConfig->getPattern('member'), ['id']);
         $this->groupPattern     = $this->compiler->compile($this->permalinkConfig->getPattern('group'), ['id']);
+
+        $forumPageRaw = $this->permalinkConfig->getPattern('forum_page');
+        $this->forumPagePattern = $this->compiler->compile($forumPageRaw, ['id', 'page']);
+        $forumAltRaw = str_contains($forumPageRaw, 'page/{page}')
+            ? str_replace('page/{page}', 'page-{page}', $forumPageRaw)
+            : str_replace('page-{page}', 'page/{page}', $forumPageRaw);
+        $this->forumPageAltPattern = $this->compiler->compile($forumAltRaw, ['id', 'page']);
+
+        $topicPageRaw = $this->permalinkConfig->getPattern('topic_page');
+        $this->topicPagePattern = $this->compiler->compile($topicPageRaw, ['id', 'page']);
+        $topicAltRaw = str_contains($topicPageRaw, 'page/{page}')
+            ? str_replace('page/{page}', 'page-{page}', $topicPageRaw)
+            : str_replace('page-{page}', 'page/{page}', $topicPageRaw);
+        $this->topicPageAltPattern = $this->compiler->compile($topicAltRaw, ['id', 'page']);
     }
 
     /**
@@ -187,8 +201,8 @@ class PermalinkRewriteProfile
      */
     public function matchTopic(string $path): ?array
     {
-        // Try paginated first
-        $result = $this->topicPagePattern->match($path);
+        // Try paginated first (primary & alternate styles)
+        $result = $this->topicPagePattern->match($path) ?? $this->topicPageAltPattern->match($path);
         if ($result !== null) {
             return [
                 'id'   => (int) $result['id'],
@@ -211,8 +225,8 @@ class PermalinkRewriteProfile
 
     public function matchForum(string $path): ?array
     {
-        // Try paginated first
-        $result = $this->forumPagePattern->match($path);
+        // Try paginated first (primary & alternate styles)
+        $result = $this->forumPagePattern->match($path) ?? $this->forumPageAltPattern->match($path);
         if ($result !== null) {
             return [
                 'id'   => (int) $result['id'],
