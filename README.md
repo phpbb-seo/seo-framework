@@ -64,7 +64,10 @@ Modern SEO infrastructure for phpBB.
 
 * **phpBB**: 3.3.0 or higher (tested and verified on phpBB 3.3.x)
 * **PHP**: 8.1, 8.2, or 8.3 (tested and verified on PHP 8.2 & 8.3)
-* **Web Server**: Apache 2.4+ with `mod_rewrite` enabled (verified for v1.0.1)
+* **Supported Web Servers**:
+  - Apache 2.4+ (with `mod_rewrite` enabled)
+  - LiteSpeed
+  - Nginx
 
 ---
 
@@ -77,7 +80,10 @@ Modern SEO infrastructure for phpBB.
    ext/phpbbseo/framework/
    ```
 
-3. Add the following rules to the phpBB root `.htaccess` file:
+3. Configure your web server rewrite rules:
+
+   ### Apache / LiteSpeed
+   Add the following rule to your phpBB root `.htaccess` file:
    ```apache
    <IfModule mod_rewrite.c>
        RewriteEngine On
@@ -86,6 +92,22 @@ Modern SEO infrastructure for phpBB.
        RewriteCond %{REQUEST_FILENAME} !-d
        RewriteRule ^(.*)$ ext/phpbbseo/framework/rewrite.php [QSA,L]
    </IfModule>
+   ```
+
+   ### Nginx — phpBB installed at domain root
+   Add the following directive inside your Nginx server block:
+   ```nginx
+   location / {
+       try_files $uri $uri/ /ext/phpbbseo/framework/rewrite.php?$query_string;
+   }
+   ```
+
+   ### Nginx — phpBB installed in a subdirectory
+   If phpBB is installed in a subdirectory (e.g. `/forum/`):
+   ```nginx
+   location /forum/ {
+       try_files $uri $uri/ /forum/ext/phpbbseo/framework/rewrite.php?$query_string;
+   }
    ```
 
 4. In your phpBB Administration Control Panel (ACP), navigate to:

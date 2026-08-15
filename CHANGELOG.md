@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+### Added
+* **Official Nginx Support**:
+  * Added and verified minimal Nginx `try_files` configuration snippets for both domain-root and subdirectory installations.
+
+---
+
 ## [1.0.1] - 2026-08-15
 
 ### Changed
