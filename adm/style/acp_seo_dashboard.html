@@ -1,5 +1,63 @@
 <!-- INCLUDE @phpbbseo_framework/acp_seo_header.html -->
 
+<!-- IF PSEO_UPDATE_AVAILABLE -->
+<div class="pseo-update-banner pseo-update-banner--warning">
+	<div class="pseo-update-content">
+		<span style="font-size: 20px;">🚀</span>
+		<div>
+			<div class="pseo-update-title">{L_SEO_APP_TITLE} {PSEO_LATEST_VERSION} is available</div>
+			<div class="pseo-update-desc">You are currently running version {PSEO_VERSION}. A newer version of phpBB SEO Framework Lite is available.</div>
+		</div>
+	</div>
+	<div class="pseo-update-actions">
+		<a href="{PSEO_RELEASE_URL}" class="pseo-btn pseo-btn--primary" target="_blank" rel="noopener noreferrer">{L_SEO_VIEW_RELEASE}</a>
+		<!-- IF PSEO_DOWNLOAD_URL -->
+		<a href="{PSEO_DOWNLOAD_URL}" class="pseo-btn pseo-btn--secondary" target="_blank" rel="noopener noreferrer">{L_SEO_DOWNLOAD_UPDATE}</a>
+		<!-- ENDIF -->
+		<a href="{U_CHECK_UPDATES}" class="pseo-btn pseo-btn--secondary">{L_SEO_CHECK_FOR_UPDATES}</a>
+	</div>
+</div>
+<!-- ELSEIF PSEO_UPDATE_CURRENT -->
+<div class="pseo-update-banner pseo-update-banner--success">
+	<div class="pseo-update-content">
+		<span style="font-size: 16px; font-weight: bold; color: #15803d;">✓</span>
+		<div>
+			<div class="pseo-update-title" style="color: #15803d;">{L_SEO_VERSION_LATEST_NOTICE}</div>
+			<div class="pseo-update-desc" style="color: #166534;">phpBB SEO Framework v{PSEO_VERSION} &bull; <!-- IF PSEO_EDITION == 'Pro' -->{L_SEO_EDITION_PRO}<!-- ELSE -->{L_SEO_EDITION_LITE}<!-- ENDIF --><!-- IF PSEO_CHECKED_AT --> &bull; Checked: {PSEO_CHECKED_AT}<!-- ENDIF --></div>
+		</div>
+	</div>
+	<div class="pseo-update-actions">
+		<a href="{U_CHECK_UPDATES}" class="pseo-btn pseo-btn--secondary">{L_SEO_CHECK_FOR_UPDATES}</a>
+	</div>
+</div>
+<!-- ELSEIF PSEO_UPDATE_AHEAD -->
+<div class="pseo-update-banner pseo-update-banner--neutral">
+	<div class="pseo-update-content">
+		<span style="font-size: 16px;">⚙️</span>
+		<div>
+			<div class="pseo-update-title">Development Build (v{PSEO_VERSION})</div>
+			<div class="pseo-update-desc">Running version {PSEO_VERSION} ahead of latest release ({PSEO_LATEST_VERSION}).</div>
+		</div>
+	</div>
+	<div class="pseo-update-actions">
+		<a href="{U_CHECK_UPDATES}" class="pseo-btn pseo-btn--secondary">{L_SEO_CHECK_FOR_UPDATES}</a>
+	</div>
+</div>
+<!-- ELSE -->
+<div class="pseo-update-banner pseo-update-banner--neutral">
+	<div class="pseo-update-content">
+		<span style="font-size: 16px;">ℹ️</span>
+		<div>
+			<div class="pseo-update-title">phpBB SEO Framework v{PSEO_VERSION} &bull; <!-- IF PSEO_EDITION == 'Pro' -->{L_SEO_EDITION_PRO}<!-- ELSE -->{L_SEO_EDITION_LITE}<!-- ENDIF --></div>
+			<div class="pseo-update-desc">{L_SEO_VERSION_UNAVAILABLE}</div>
+		</div>
+	</div>
+	<div class="pseo-update-actions">
+		<a href="{U_CHECK_UPDATES}" class="pseo-btn pseo-btn--secondary">{L_SEO_CHECK_FOR_UPDATES}</a>
+	</div>
+</div>
+<!-- ENDIF -->
+
 <div class="pseo-card">
 	<div class="pseo-card-header">
 		<h2 class="pseo-card-title">{L_SEO_STATUS_OVERVIEW}</h2>

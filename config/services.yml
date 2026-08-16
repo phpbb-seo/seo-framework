@@ -154,6 +154,8 @@ services:
             - '@template'
             - '@config'
             - '@request'
+            - '@phpbbseo.framework.canonical.resolver'
+            - '@phpbbseo.framework.context.factory'
         tags:
             - { name: event.listener }
 
@@ -188,4 +190,12 @@ services:
             - '@phpbbseo.framework.sitemap.url_generator'
             - '@phpbbseo.framework.sitemap.index_builder'
             - '@phpbbseo.framework.configuration.provider'
+
+    # ── Update Services ───────────────────────────────────────────────────────
+
+    phpbbseo.framework.update.checker:
+        class: phpbbseo\framework\Update\UpdateChecker
+        arguments:
+            - '@cache.driver'
+
 

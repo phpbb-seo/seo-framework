@@ -109,4 +109,17 @@ $lang = array_merge($lang, [
     'SEO_URLS_PER_FILE_EXPLAIN'    => 'Specify maximum number of URLs per topic sitemap file (allowed range: 100 - 50,000).',
     'SEO_SITEMAP_SAVED'            => 'XML Sitemap configuration has been updated successfully.',
     'SEO_ERR_SITEMAP_CHUNK_SIZE'   => 'URLs per sitemap file must be an integer between 100 and 50,000.',
+
+    // Version & Updates
+    'SEO_VERSION_TITLE'            => 'Version & Updates',
+    'SEO_VERSION_LATEST_NOTICE'    => 'You are running the latest version of phpBB SEO Framework.',
+    'SEO_VERSION_UPDATE_AVAILABLE' => 'phpBB SEO Framework %s is available',
+    'SEO_VERSION_UPDATE_EXPLAIN'   => 'You are currently running version %1$s. A newer version of phpBB SEO Framework Lite (%2$s) is available for download.',
+    'SEO_VERSION_AHEAD_NOTICE'     => 'You are running a development version (%1$s) ahead of the latest official release (%2$s).',
+    'SEO_VERSION_UNAVAILABLE'      => 'Update status is currently unavailable.',
+    'SEO_CHECK_FOR_UPDATES'        => 'Check for updates',
+    'SEO_VIEW_RELEASE'             => 'View Release',
+    'SEO_DOWNLOAD_UPDATE'          => 'Download Update',
+    'SEO_UPDATES_CHECKED_SUCCESS'  => 'Update check completed successfully.',
 ]);
+

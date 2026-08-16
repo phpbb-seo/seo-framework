@@ -85,6 +85,12 @@ class SeoListener implements EventSubscriberInterface
             return;
         }
 
+        // Establish board-root URL context early so operational endpoints (e.g. mcp.php, posting.php)
+        // generate absolute/board-rooted URLs rather than relative paths that break under nested SEO URLs.
+        if (!defined('PHPBB_USE_BOARD_URL_PATH') && !defined('IN_ADMIN') && !defined('IN_INSTALL') && !defined('IN_CRON')) {
+            define('PHPBB_USE_BOARD_URL_PATH', true);
+        }
+
         $seoPage = (int) $this->request->variable('seo_page', 0, false, request_interface::GET);
         if ($seoPage > 1) {
             $topicId = (int) $this->request->variable('t', 0, false, request_interface::GET);

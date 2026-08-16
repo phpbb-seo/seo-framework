@@ -1,6 +1,6 @@
 <!-- INCLUDE overall_header.html -->
 
-<link rel="stylesheet" href="{T_ASSETS_PATH}/../ext/phpbbseo/framework/adm/style/css/pseo_admin.css?v=1.0.1" type="text/css" />
+<link rel="stylesheet" href="{T_ASSETS_PATH}/../ext/phpbbseo/framework/adm/style/css/pseo_admin.css?v={PSEO_ASSET_VERSION}" type="text/css" />
 
 <div class="pseo-app" data-base-url="{PSEO_BASE_URL}">
 	<header class="pseo-header">
@@ -8,7 +8,7 @@
 			<span class="pseo-logo-badge">SEO</span>
 			<div>
 				<h1 class="pseo-brand-title">{L_SEO_APP_TITLE}</h1>
-				<span class="pseo-brand-version">v1.0.1 &bull; {L_SEO_EDITION_LITE}</span>
+				<span class="pseo-brand-version">v{PSEO_VERSION} &bull; <!-- IF PSEO_EDITION == 'Pro' -->{L_SEO_EDITION_PRO}<!-- ELSE -->{L_SEO_EDITION_LITE}<!-- ENDIF --></span>
 			</div>
 		</div>
 		<div class="pseo-header-meta">

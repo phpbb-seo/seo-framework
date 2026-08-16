@@ -45,8 +45,8 @@ class MetadataResolver
         }
 
         $globalTokens = [
-            'board_name' => $context->boardName,
-            'site_desc'  => $context->siteDesc,
+            'board_name' => $this->normalizer->normalize($context->boardName, 0),
+            'site_desc'  => $this->normalizer->normalize($context->siteDesc, 0),
         ];
 
         return match ($context->resourceType) {
@@ -54,8 +54,35 @@ class MetadataResolver
             'forum'  => $this->resolveForum($context, $globalTokens, $pageLabel, $maxDescLen),
             'topic'  => $this->resolveTopic($context, $globalTokens, $pageLabel, $maxDescLen),
             'member' => $this->resolveMember($context, $globalTokens, $pageLabel, $maxDescLen),
-            default  => new MetadataResult($context->boardName, ''),
+            'group'  => $this->resolveGroup($context, $globalTokens, $pageLabel, $maxDescLen),
+            default  => new MetadataResult($this->normalizer->normalize($context->boardName, 0), ''),
         };
+    }
+
+    private function resolveGroup(MetadataContext $context, array $globalTokens, string $pageLabel, int $maxDescLen): MetadataResult
+    {
+        $titlePattern = (string) $this->configProvider->get('seo_meta_group_title', '{group_name} - {board_name}');
+        $groupName = (string) ($context->entityData['group_name'] ?? '');
+        if ($groupName === '' && $context->resourceId > 0 && $this->db !== null) {
+            $sql = 'SELECT group_name, group_type FROM ' . GROUPS_TABLE . ' WHERE group_id = ' . (int) $context->resourceId;
+            $result = $this->db->sql_query_limit($sql, 1);
+            $row = $this->db->sql_fetchrow($result);
+            $this->db->sql_freeresult($result);
+            if ($row) {
+                $groupName = (string) ($row['group_name'] ?? '');
+                if (isset($this->user->lang['G_' . $groupName])) {
+                    $groupName = $this->user->lang['G_' . $groupName];
+                }
+            }
+        }
+
+        $groupTokens = array_merge($globalTokens, [
+            'group_name' => $this->normalizer->normalize($groupName, 0),
+            'group_id'   => $context->resourceId,
+        ]);
+
+        $title = $this->patternRenderer->render($titlePattern, $groupTokens, $context->pageNumber, $pageLabel);
+        return new MetadataResult($title, '');
     }
 
     private function resolveHome(MetadataContext $context, array $globalTokens, string $pageLabel, int $maxDescLen): MetadataResult
@@ -74,7 +101,7 @@ class MetadataResolver
     {
         $titlePattern = (string) $this->configProvider->get('seo_meta_forum_title', '{forum_name} - {board_name}');
         $forumTokens = array_merge($globalTokens, [
-            'forum_name' => $context->entityData['forum_name'] ?? '',
+            'forum_name' => $this->normalizer->normalize((string) ($context->entityData['forum_name'] ?? ''), 0),
             'forum_id'   => $context->resourceId,
         ]);
 
@@ -90,9 +117,9 @@ class MetadataResolver
     {
         $titlePattern = (string) $this->configProvider->get('seo_meta_topic_title', '{topic_title} - {board_name}');
         $topicTokens = array_merge($globalTokens, [
-            'topic_title' => $context->entityData['topic_title'] ?? '',
+            'topic_title' => $this->normalizer->normalize((string) ($context->entityData['topic_title'] ?? ''), 0),
             'topic_id'    => $context->resourceId,
-            'forum_name'  => $context->entityData['forum_name'] ?? '',
+            'forum_name'  => $this->normalizer->normalize((string) ($context->entityData['forum_name'] ?? ''), 0),
         ]);
 
         $title = $this->patternRenderer->render($titlePattern, $topicTokens, $context->pageNumber, $pageLabel);
@@ -123,16 +150,30 @@ class MetadataResolver
     private function resolveMember(MetadataContext $context, array $globalTokens, string $pageLabel, int $maxDescLen): MetadataResult
     {
         $titlePattern = (string) $this->configProvider->get('seo_meta_member_title', '{username} - {board_name}');
+        $username = (string) ($context->entityData['username'] ?? '');
+        $userSig = (string) ($context->entityData['user_sig'] ?? '');
+
+        if ($username === '' && $context->resourceId > 0 && $this->db !== null) {
+            $sql = 'SELECT username, user_sig FROM ' . USERS_TABLE . ' WHERE user_id = ' . (int) $context->resourceId;
+            $result = $this->db->sql_query_limit($sql, 1);
+            $row = $this->db->sql_fetchrow($result);
+            $this->db->sql_freeresult($result);
+
+            if ($row) {
+                $username = (string) ($row['username'] ?? '');
+                $userSig = (string) ($row['user_sig'] ?? '');
+            }
+        }
+
         $memberTokens = array_merge($globalTokens, [
-            'username' => $context->entityData['username'] ?? '',
+            'username' => $this->normalizer->normalize($username, 0),
             'user_id'  => $context->resourceId,
         ]);
 
         $title = $this->patternRenderer->render($titlePattern, $memberTokens, $context->pageNumber, $pageLabel);
 
         // Member description policy: Only output if meaningful safe public information is available
-        $descRaw = (string) ($context->entityData['user_sig'] ?? '');
-        $desc = $this->normalizer->normalize($descRaw, $maxDescLen);
+        $desc = $this->normalizer->normalize($userSig, $maxDescLen);
 
         return new MetadataResult($title, $desc);
     }

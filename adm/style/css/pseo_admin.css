@@ -512,3 +512,57 @@
 .pseo-btn--secondary:hover {
 	background: var(--pseo-color-surface-hover);
 }
+
+/* Update Card & State Presentation */
+.pseo-update-banner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	border-radius: var(--pseo-radius-md);
+	font-size: 13px;
+	margin-bottom: 16px;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.pseo-update-banner--success {
+	background: var(--pseo-color-success-bg);
+	border: 1px solid var(--pseo-color-success-border);
+	color: #15803d;
+}
+
+.pseo-update-banner--warning {
+	background: var(--pseo-color-warning-bg);
+	border: 1px solid var(--pseo-color-warning-border);
+	color: #92400e;
+}
+
+.pseo-update-banner--neutral {
+	background: var(--pseo-color-surface-subtle);
+	border: 1px solid var(--pseo-color-border);
+	color: var(--pseo-color-text-muted);
+}
+
+.pseo-update-content {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.pseo-update-title {
+	font-weight: 700;
+	margin-bottom: 2px;
+}
+
+.pseo-update-desc {
+	font-size: 12px;
+	color: var(--pseo-color-text-muted);
+}
+
+.pseo-update-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-08-16
+
+### Added
+* **Authoritative ACP Version Identity & Update Checker**:
+  * Added authoritative framework runtime version source (`phpbbseo\framework\Version\Version`) preventing version duplication across ACP modules.
+  * Added lightweight, cached GitHub Releases update checker service (`phpbbseo\framework\Update\UpdateChecker`) querying official releases (`phpbb-seo/seo-framework`).
+  * Added ACP dashboard notification banners displaying real-time version status (`up to date`, `update available`, `development build`, `unavailable`).
+  * Added manual update check and direct official release/download asset links with zero frontend overhead.
+* **Branded SEO Source Organization & Head Markup**:
+  * Added clean, branded HTML comment markers around SEO metadata (`<!-- Search Engine Optimization by phpBB SEO Framework - https://www.phpbbseo.com/ -->` ... `<!-- /phpBB SEO Framework -->`).
+  * Unified `<title>`, `<meta name="description">`, and `<link rel="canonical">` into a single, clean block in the `<head>` section while eliminating duplicate tags.
+
+### Fixed
+* **Titles & Meta HTML Double-Escaping**:
+  * Fixed double-escaping (`&amp;amp;`) in `<title>` tags by normalizing input tokens (`forum_name`, `topic_title`, `username`, `board_name`, `site_desc`) into raw plain semantic text internally, guaranteeing single HTML escaping strictly at the output boundary.
+* **Automatic Meta Description BBCode & Markup Cleanup**:
+  * Fixed topic auto-generated meta descriptions leaking raw BBCode tags (`[center]`, `[b]`, `[i]`, `[url]`, `[quote]`, `[code]`, etc.).
+  * Implemented a comprehensive plain text cleanup pipeline with `s9e\TextFormatter` unparsing, removal of quote/code/attachment blocks, stripping of custom/UID-tagged BBCodes, and word-boundary multibyte Unicode truncation.
+* **ACP Version Display**:
+  * Fixed hardcoded `v1.0.1` version strings in ACP header and footer templates to dynamically reflect the authoritative framework version.
+* **Operational & AJAX Endpoint Resolution from Nested SEO URLs**:
+  * Established board-root URL context (`PHPBB_USE_BOARD_URL_PATH`) during framework bootstrap (`core.common`), ensuring native phpBB operational endpoints (`mcp.php`, `posting.php`, `ucp.php`, `report.php`, `download/file.php`) generate fully-rooted URLs.
+  * Fixed Quick Moderation AJAX actions (`lock`, `unlock`, `make_sticky`, `make_announce`, `make_global`, `make_normal`, `delete_topic`, `restore_topic`, `move`, `fork`) failing with `404 Not Found` ("The requested page could not be found") when invoked from nested topic pages.
+  * Prevented client-side relative internal phpBB URLs from incorrectly resolving below `/topic/`, `/forum/`, `/member/`, or `/group/` URL structures.
+
+---
+
 ## [1.0.4] - 2026-08-16
 
 ### Added

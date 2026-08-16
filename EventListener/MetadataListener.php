@@ -7,13 +7,15 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use phpbbseo\framework\Configuration\ConfigurationProvider;
 use phpbbseo\framework\Metadata\MetadataResolver;
 use phpbbseo\framework\Metadata\MetadataContext;
+use phpbbseo\framework\Canonical\CanonicalResolver;
+use phpbbseo\framework\Context\RequestContextFactory;
 use phpbb\template\template;
 use phpbb\config\config;
 use phpbb\request\request_interface;
 
 /**
  * Event listener that intercepts phpBB page header generation and injects
- * resolved SEO titles and meta descriptions.
+ * structured, branded SEO titles, meta descriptions, and canonical links.
  */
 class MetadataListener implements EventSubscriberInterface
 {
@@ -24,17 +26,20 @@ class MetadataListener implements EventSubscriberInterface
         private readonly MetadataResolver $resolver,
         private readonly template $template,
         private readonly config $config,
-        private readonly request_interface $request
+        private readonly request_interface $request,
+        private readonly ?CanonicalResolver $canonicalResolver = null,
+        private readonly ?RequestContextFactory $contextFactory = null
     ) {}
 
     public static function getSubscribedEvents(): array
     {
         return [
-            'core.viewtopic_modify_page_title' => 'onViewtopicModifyTitle',
-            'core.viewforum_modify_page_title' => 'onViewforumModifyTitle',
-            'core.memberlist_view_profile'     => 'onMemberlistViewProfile',
-            'core.page_header'                 => 'onPageHeader',
-            'core.page_header_after'           => 'onPageHeaderAfter',
+            'core.viewtopic_modify_page_title'               => 'onViewtopicModifyTitle',
+            'core.viewforum_modify_page_title'               => 'onViewforumModifyTitle',
+            'core.memberlist_view_profile'                   => 'onMemberlistViewProfile',
+            'core.memberlist_modify_view_profile_template_vars' => 'onMemberlistViewProfileVars',
+            'core.page_header'                               => 'onPageHeader',
+            'core.page_header_after'                         => 'onPageHeaderAfter',
         ];
     }
 
@@ -80,8 +85,25 @@ class MetadataListener implements EventSubscriberInterface
         }
     }
 
+    public function onMemberlistViewProfileVars(\phpbb\event\data $event): void
+    {
+        $userId = (int) ($event['user_id'] ?? 0);
+        if ($userId > 0) {
+            $this->entityContextData = [
+                'type'     => 'member',
+                'id'       => $userId,
+                'username' => '',
+                'user_sig' => '',
+            ];
+        }
+    }
+
     public function onPageHeader(\phpbb\event\data $event): void
     {
+        if (defined('IN_ADMIN') || defined('ADMIN_START') || str_contains($this->request->server('SCRIPT_NAME', ''), '/adm/')) {
+            return;
+        }
+
         if (!$this->configProvider->isEnabled() || $this->configProvider->get('seo_meta_enable', '1') !== '1') {
             return;
         }
@@ -97,22 +119,57 @@ class MetadataListener implements EventSubscriberInterface
             // Update phpBB page_title event data
             $event['page_title'] = $result->title;
 
-            // Assign template variables (Single HTML escaping at template boundary)
+            // Assign template variables
             $this->template->assign_vars([
                 'PAGE_TITLE'             => $result->title,
                 'S_SEO_META_DESCRIPTION' => $result->hasDescription(),
                 'SEO_META_DESCRIPTION'   => htmlspecialchars($result->description, ENT_QUOTES, 'UTF-8'),
             ]);
 
-            // Register clean output buffer filter to ensure exact title output without phpBB template duplication
+            // Resolve canonical URL for branding block
+            $canonicalUrl = null;
+            $pageData = $event['page_data'] ?? [];
+            if (!empty($pageData['U_CANONICAL'])) {
+                $canonicalUrl = (string) $pageData['U_CANONICAL'];
+            } elseif ($this->canonicalResolver !== null && $this->contextFactory !== null && $this->configProvider->isRewriteEnabled()) {
+                $reqContext = $this->contextFactory->createFromPhpbbRequest($this->request);
+                $canonicalUrl = $this->canonicalResolver->resolve($reqContext);
+            }
+
             $finalEscapedTitle = htmlspecialchars($result->title, ENT_QUOTES, 'UTF-8');
-            ob_start(function ($buffer) use ($finalEscapedTitle) {
-                return preg_replace_callback('#<title>(.*?)</title>#si', function ($matches) use ($finalEscapedTitle) {
+            $finalEscapedDesc = $result->hasDescription() ? htmlspecialchars($result->description, ENT_QUOTES, 'UTF-8') : null;
+            $finalEscapedCanonical = ($canonicalUrl !== null && $canonicalUrl !== '') ? htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') : null;
+
+            // Register clean output buffer filter to structure branded SEO metadata in <head>
+            ob_start(function ($buffer) use ($finalEscapedTitle, $finalEscapedDesc, $finalEscapedCanonical) {
+                // Strip duplicate canonical and description tags from elsewhere in the buffer
+                if ($finalEscapedCanonical !== null) {
+                    $buffer = preg_replace('#\s*<link\s+rel=["\']canonical["\'][^>]*>\s*#si', "\n", $buffer) ?? $buffer;
+                }
+                if ($finalEscapedDesc !== null) {
+                    $buffer = preg_replace('#\s*<meta\s+name=["\']description["\'][^>]*>\s*#si', "\n", $buffer) ?? $buffer;
+                }
+
+                return preg_replace_callback('#<title>(.*?)</title>#si', function ($matches) use ($finalEscapedTitle, $finalEscapedDesc, $finalEscapedCanonical) {
                     $prefix = '';
                     if (preg_match('#^(\(\d+\)\s*)#u', trim($matches[1]), $pMatch)) {
                         $prefix = $pMatch[1];
                     }
-                    return '<title>' . $prefix . $finalEscapedTitle . '</title>';
+
+                    $lines = [];
+                    $lines[] = '<!-- Search Engine Optimization by phpBB SEO Framework - https://www.phpbbseo.com/ -->';
+                    $lines[] = '';
+                    $lines[] = '<title>' . $prefix . $finalEscapedTitle . '</title>';
+                    if ($finalEscapedDesc !== null && $finalEscapedDesc !== '') {
+                        $lines[] = '<meta name="description" content="' . $finalEscapedDesc . '" />';
+                    }
+                    if ($finalEscapedCanonical !== null && $finalEscapedCanonical !== '') {
+                        $lines[] = '<link rel="canonical" href="' . $finalEscapedCanonical . '" />';
+                    }
+                    $lines[] = '';
+                    $lines[] = '<!-- /phpBB SEO Framework -->';
+
+                    return implode("\n", $lines);
                 }, $buffer, 1);
             });
         } catch (\Throwable) {
@@ -138,6 +195,23 @@ class MetadataListener implements EventSubscriberInterface
             $type = $this->entityContextData['type'] ?? 'other';
             $id   = (int) ($this->entityContextData['id'] ?? 0);
             return new MetadataContext($type, $id, $this->entityContextData, $pageNumber, $boardName, $siteDesc);
+        }
+
+        // Check if member profile page
+        $mode = (string) $this->request->variable('mode', '', false, request_interface::GET);
+        if ($mode === 'viewprofile') {
+            $userId = (int) $this->request->variable('u', 0, false, request_interface::GET);
+            if ($userId > 0) {
+                return new MetadataContext('member', $userId, ['user_id' => $userId], $pageNumber, $boardName, $siteDesc);
+            }
+        }
+
+        // Check if group page
+        if ($mode === 'group') {
+            $groupId = (int) $this->request->variable('g', 0, false, request_interface::GET);
+            if ($groupId > 0) {
+                return new MetadataContext('group', $groupId, ['group_id' => $groupId], $pageNumber, $boardName, $siteDesc);
+            }
         }
 
         // Determine if Board Index / Home

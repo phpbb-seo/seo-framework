@@ -8,6 +8,9 @@ use phpbbseo\framework\Rewrite\UrlPatternCompiler;
 use phpbbseo\framework\Rewrite\PatternConflictDetector;
 use phpbbseo\framework\Rewrite\PermalinkConfiguration;
 use phpbbseo\framework\Configuration\ConfigurationProvider;
+use phpbbseo\framework\Version\Version;
+use phpbbseo\framework\Update\UpdateChecker;
+use phpbbseo\framework\Update\UpdateResult;
 
 /**
  * ACP Controller for phpBB SEO Framework (Dashboard & Permalinks).
@@ -33,6 +36,10 @@ class main_module
         $template->assign_vars([
             'PSEO_ACTIVE_MODE'      => $mode,
             'PSEO_BASE_URL'         => $boardUrl,
+            'PSEO_VERSION'          => Version::getVersion(),
+            'PSEO_EDITION'          => Version::getEdition(),
+            'PSEO_ASSET_VERSION'    => Version::getVersion(),
+            'PSEO_FULL_VERSION'     => Version::getFullVersionString(),
             'U_ACTION_DASHBOARD'    => $this->u_action . '&amp;mode=dashboard',
             'U_ACTION_PERMALINKS'   => $this->u_action . '&amp;mode=permalinks',
             'U_ACTION_TITLES_META'  => $this->u_action . '&amp;mode=titles_meta',
@@ -43,7 +50,7 @@ class main_module
 
         switch ($mode) {
             case 'dashboard':
-                $this->handleDashboard($phpbb_container, $user, $template, $configProvider);
+                $this->handleDashboard($phpbb_container, $user, $template, $request, $configProvider);
                 break;
 
             case 'permalinks':
@@ -63,7 +70,7 @@ class main_module
         }
     }
 
-    private function handleDashboard($container, $user, $template, $configProvider): void
+    private function handleDashboard($container, $user, $template, $request, $configProvider): void
     {
         $this->tpl_name = '@phpbbseo_framework/acp_seo_dashboard';
         $this->page_title = $user->lang('ACP_PHPBBSEO_DASHBOARD');
@@ -71,12 +78,29 @@ class main_module
         /** @var PermalinkConfiguration $permalinkConfig */
         $permalinkConfig = $container->get('phpbbseo.framework.rewrite.permalink_configuration');
 
+        /** @var UpdateChecker $updateChecker */
+        $updateChecker = $container->get('phpbbseo.framework.update.checker');
+
+        $isManualCheck = (bool) $request->variable('check_updates', 0);
+        $updateResult = $updateChecker->check($isManualCheck);
+
         $template->assign_vars([
-            'SEO_PRESET'     => $permalinkConfig->getActivePreset(),
-            'PATTERN_FORUM'  => $permalinkConfig->getPattern('forum'),
-            'PATTERN_TOPIC'  => $permalinkConfig->getPattern('topic'),
-            'PATTERN_MEMBER' => $permalinkConfig->getPattern('member'),
-            'PATTERN_GROUP'  => $permalinkConfig->getPattern('group'),
+            'SEO_PRESET'              => $permalinkConfig->getActivePreset(),
+            'PATTERN_FORUM'           => $permalinkConfig->getPattern('forum'),
+            'PATTERN_TOPIC'           => $permalinkConfig->getPattern('topic'),
+            'PATTERN_MEMBER'          => $permalinkConfig->getPattern('member'),
+            'PATTERN_GROUP'           => $permalinkConfig->getPattern('group'),
+            'PSEO_UPDATE_STATUS'      => $updateResult->getStatus(),
+            'PSEO_UPDATE_AVAILABLE'   => $updateResult->isUpdateAvailable(),
+            'PSEO_UPDATE_AHEAD'       => $updateResult->isAhead(),
+            'PSEO_UPDATE_CURRENT'     => ($updateResult->getStatus() === UpdateResult::STATUS_UP_TO_DATE),
+            'PSEO_UPDATE_UNAVAILABLE' => ($updateResult->getStatus() === UpdateResult::STATUS_UNAVAILABLE),
+            'PSEO_LATEST_VERSION'     => $updateResult->getLatestVersion(),
+            'PSEO_RELEASE_URL'        => $updateResult->getReleaseUrl(),
+            'PSEO_DOWNLOAD_URL'       => $updateResult->getDownloadUrl(),
+            'PSEO_CHECKED_AT'         => $updateResult->getCheckedAt() > 0 ? $user->format_date($updateResult->getCheckedAt()) : '',
+            'U_CHECK_UPDATES'         => $this->u_action . '&amp;mode=dashboard&amp;check_updates=1',
+            'S_MANUAL_CHECKED'        => $isManualCheck,
         ]);
     }
 
