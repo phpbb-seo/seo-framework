@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-08-16
+
+### Added
+* **Public Batch Preload API**:
+  * Added `EntitySeoContext::preloadTopics(array $topicIds)` and `EntitySeoContext::preloadPosts(array $postIds)` allowing heavy custom extensions and widgets to batch-load metadata in a single query.
+
+### Fixed
+* **Third-Party `append_sid()` Extension Compatibility**:
+  * Fixed `ResourceDetector` prioritizing `p` over `t` on combined `viewtopic.php?t=X&p=Y#pY` links, ensuring explicit `t` is authoritative with zero queries to `phpbb_posts`.
+  * Added request-scoped fallback discovery and negative caching for isolated `p-only` links (`viewtopic.php?p=Y`) without N+1 query loops.
+  * Preserved `#pXXX` post anchors seamlessly during outbound SEO topic URL rewriting.
+  * Stripped consumed `p` query parameters from rewritten clean URLs.
+
+---
+
 ## [1.0.3] - 2026-08-16
 
 ### Fixed

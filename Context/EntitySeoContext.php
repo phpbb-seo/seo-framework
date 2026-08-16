@@ -43,6 +43,10 @@ class EntitySeoContext
 
     public function getTopicIdForPost(int $postId): ?int
     {
+        if (!array_key_exists($postId, $this->postToTopic)) {
+            $map = $this->slugRepository->fetchPostToTopicBatch([$postId]);
+            $this->postToTopic[$postId] = $map[$postId] ?? null;
+        }
         return $this->postToTopic[$postId] ?? null;
     }
 
@@ -59,11 +63,9 @@ class EntitySeoContext
 
     public function getTopicTitle(int $topicId): ?string
     {
-        if (!isset($this->topicTitles[$topicId])) {
+        if (!array_key_exists($topicId, $this->topicTitles)) {
             $fetched = $this->slugRepository->fetchSlugsBatch('topic', [$topicId]);
-            if (isset($fetched[$topicId])) {
-                $this->topicTitles[$topicId] = $fetched[$topicId];
-            }
+            $this->topicTitles[$topicId] = $fetched[$topicId] ?? null;
         }
         return $this->topicTitles[$topicId] ?? null;
     }
@@ -81,11 +83,9 @@ class EntitySeoContext
 
     public function getForumName(int $forumId): ?string
     {
-        if (!isset($this->forumNames[$forumId])) {
+        if (!array_key_exists($forumId, $this->forumNames)) {
             $fetched = $this->slugRepository->fetchSlugsBatch('forum', [$forumId]);
-            if (isset($fetched[$forumId])) {
-                $this->forumNames[$forumId] = $fetched[$forumId];
-            }
+            $this->forumNames[$forumId] = $fetched[$forumId] ?? null;
         }
         return $this->forumNames[$forumId] ?? null;
     }
@@ -103,11 +103,9 @@ class EntitySeoContext
 
     public function getUsername(int $userId): ?string
     {
-        if (!isset($this->usernames[$userId])) {
+        if (!array_key_exists($userId, $this->usernames)) {
             $fetched = $this->slugRepository->fetchSlugsBatch('member', [$userId]);
-            if (isset($fetched[$userId])) {
-                $this->usernames[$userId] = $fetched[$userId];
-            }
+            $this->usernames[$userId] = $fetched[$userId] ?? null;
         }
         return $this->usernames[$userId] ?? null;
     }
@@ -125,12 +123,61 @@ class EntitySeoContext
 
     public function getGroupName(int $groupId): ?string
     {
-        if (!isset($this->groupNames[$groupId])) {
+        if (!array_key_exists($groupId, $this->groupNames)) {
             $fetched = $this->slugRepository->fetchSlugsBatch('group', [$groupId]);
-            if (isset($fetched[$groupId])) {
-                $this->groupNames[$groupId] = $fetched[$groupId];
-            }
+            $this->groupNames[$groupId] = $fetched[$groupId] ?? null;
         }
         return $this->groupNames[$groupId] ?? null;
+    }
+
+    /**
+     * Preload and cache a list of topic IDs in a single batch query.
+     * Optional developer helper for heavy custom extensions / widgets.
+     *
+     * @param array<int> $topicIds
+     */
+    public function preloadTopics(array $topicIds): void
+    {
+        $missing = [];
+        foreach ($topicIds as $id) {
+            $id = (int) $id;
+            if ($id > 0 && !array_key_exists($id, $this->topicTitles)) {
+                $missing[] = $id;
+            }
+        }
+        if (!empty($missing)) {
+            $fetched = $this->slugRepository->fetchSlugsBatch('topic', array_unique($missing));
+            foreach ($missing as $id) {
+                $this->topicTitles[$id] = $fetched[$id] ?? null;
+            }
+        }
+    }
+
+    /**
+     * Preload and cache a list of post IDs to their owning topic IDs in a single batch query.
+     * Optional developer helper for heavy custom extensions / widgets.
+     *
+     * @param array<int> $postIds
+     */
+    public function preloadPosts(array $postIds): void
+    {
+        $missing = [];
+        foreach ($postIds as $id) {
+            $id = (int) $id;
+            if ($id > 0 && !array_key_exists($id, $this->postToTopic)) {
+                $missing[] = $id;
+            }
+        }
+        if (!empty($missing)) {
+            $map = $this->slugRepository->fetchPostToTopicBatch(array_unique($missing));
+            foreach ($missing as $id) {
+                $this->postToTopic[$id] = $map[$id] ?? null;
+            }
+            // Preload the resolved topic slugs in batch to guarantee 0-SQL topic generation
+            $resolvedTopicIds = array_filter(array_values($map));
+            if (!empty($resolvedTopicIds)) {
+                $this->preloadTopics($resolvedTopicIds);
+            }
+        }
     }
 }

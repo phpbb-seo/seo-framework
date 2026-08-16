@@ -155,7 +155,12 @@ class PublicResourceUrlResolver
                 } else {
                     $seoPath = $this->permalinkProfile->generateTopicUrl($id);
                 }
-                $excludeKeys = ['t', 'start'];
+                $excludeKeys = ['t', 'start', 'p'];
+                // If this topic target was passed with a post_id and anchor is empty, set #p{id}
+                $postId = isset($parsedParams['p']) ? (int) $parsedParams['p'] : ($pagination['post_id'] ?? 0);
+                if ($anchor === '' && $postId > 0) {
+                    $anchor = '#p' . $postId;
+                }
                 break;
 
             case 'post':
@@ -164,7 +169,9 @@ class PublicResourceUrlResolver
                 if ($topicId !== null) {
                     $seoPath = $this->permalinkProfile->generateTopicUrl($topicId);
                     $excludeKeys = ['p'];
-                    // If no explicit anchor was in input, leave empty so phpBB core post-append produces single #p anchor
+                    if ($anchor === '') {
+                        $anchor = '#p' . $id;
+                    }
                 }
                 break;
 

@@ -29,14 +29,22 @@ class ResourceDetector
                 break;
 
             case 'viewtopic.php':
+                $topicId = isset($params['t']) ? (int) $params['t'] : null;
                 $postId = isset($params['p']) ? (int) $params['p'] : null;
+                $start = isset($params['start']) ? (int) $params['start'] : 0;
+
+                // Priority 1: If explicit topic_id is available (even with p), treat as topic target with post_id attribute
+                if ($topicId !== null && $topicId > 0) {
+                    $paginationParams = ['start' => $start];
+                    if ($postId !== null && $postId > 0) {
+                        $paginationParams['post_id'] = $postId;
+                    }
+                    return new ResourceTarget('topic', $topicId, $paginationParams);
+                }
+
+                // Priority 2: Isolated post_id without topic_id
                 if ($postId !== null && $postId > 0) {
                     return new ResourceTarget('post', $postId);
-                }
-                $topicId = isset($params['t']) ? (int) $params['t'] : null;
-                if ($topicId !== null && $topicId > 0) {
-                    $start = isset($params['start']) ? (int) $params['start'] : 0;
-                    return new ResourceTarget('topic', $topicId, ['start' => $start]);
                 }
                 break;
 
