@@ -81,7 +81,7 @@ class MetadataResolver
             'group_id'   => $context->resourceId,
         ]);
 
-        $title = $this->patternRenderer->render($titlePattern, $groupTokens, $context->pageNumber, $pageLabel);
+        $title = $this->normalizer->normalize($this->patternRenderer->render($titlePattern, $groupTokens, $context->pageNumber, $pageLabel), 0);
         return new MetadataResult($title, '');
     }
 
@@ -90,7 +90,7 @@ class MetadataResolver
         $titlePattern = (string) $this->configProvider->get('seo_meta_home_title', '{board_name}');
         $descPattern  = (string) $this->configProvider->get('seo_meta_home_desc', '{site_desc}');
 
-        $title = $this->patternRenderer->render($titlePattern, $globalTokens, $context->pageNumber, $pageLabel);
+        $title = $this->normalizer->normalize($this->patternRenderer->render($titlePattern, $globalTokens, $context->pageNumber, $pageLabel), 0);
         $descRaw = $this->patternRenderer->render($descPattern, $globalTokens, 1, '');
         $desc = $this->normalizer->normalize($descRaw, $maxDescLen);
 
@@ -105,7 +105,7 @@ class MetadataResolver
             'forum_id'   => $context->resourceId,
         ]);
 
-        $title = $this->patternRenderer->render($titlePattern, $forumTokens, $context->pageNumber, $pageLabel);
+        $title = $this->normalizer->normalize($this->patternRenderer->render($titlePattern, $forumTokens, $context->pageNumber, $pageLabel), 0);
 
         $forumDesc = (string) ($context->entityData['forum_desc'] ?? '');
         $desc = $this->normalizer->normalize($forumDesc, $maxDescLen);
@@ -122,7 +122,7 @@ class MetadataResolver
             'forum_name'  => $this->normalizer->normalize((string) ($context->entityData['forum_name'] ?? ''), 0),
         ]);
 
-        $title = $this->patternRenderer->render($titlePattern, $topicTokens, $context->pageNumber, $pageLabel);
+        $title = $this->normalizer->normalize($this->patternRenderer->render($titlePattern, $topicTokens, $context->pageNumber, $pageLabel), 0);
 
         // Fetch first-post content: Prefer data already present in context
         $postText = (string) ($context->entityData['post_text'] ?? '');
@@ -170,7 +170,7 @@ class MetadataResolver
             'user_id'  => $context->resourceId,
         ]);
 
-        $title = $this->patternRenderer->render($titlePattern, $memberTokens, $context->pageNumber, $pageLabel);
+        $title = $this->normalizer->normalize($this->patternRenderer->render($titlePattern, $memberTokens, $context->pageNumber, $pageLabel), 0);
 
         // Member description policy: Only output if meaningful safe public information is available
         $desc = $this->normalizer->normalize($userSig, $maxDescLen);

@@ -5,6 +5,20 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-08-21
+
+### Fixed
+* **Real-Render SEO Titles & Meta Single Escaping Pipeline**:
+  * Normalized all token-rendered strings in `MetadataPatternRenderer::render()` by decoding presentation HTML entities (`html_entity_decode`) prior to output.
+  * Wrapped all resolver endpoints in `MetadataResolver` with `PlainTextNormalizer::normalize(..., 0)`.
+  * Guaranteed raw plain semantic text for browser DOM (`document.title` and `textContent`) while ensuring strictly single-escaped output (`&amp;`, `&quot;`, `&#039;`, `&lt;`, `&gt;`) in raw HTML source and total absence of `&amp;amp;`.
+* **Clean Semantic Slug Generation & HTML Entity Decoding**:
+  * Updated `DefaultSlugGenerator::generate()` to decode HTML entities before stripping non-alphanumerics, eliminating premature entity encoding artifacts (e.g. `Installation & Configuration` converting to `-amp-` instead of `-`).
+  * Added full multilingual Unicode preservation with word-boundary normalization.
+* **Authoritative Slug Lifecycle & Historical 301 Redirect Normalization**:
+  * Verified full slug lifecycle: Title change $\rightarrow$ New Slug $\rightarrow$ Historical Slug Recognition $\rightarrow$ Single-hop Direct 301 $\rightarrow$ Zero Redirect Chains ($A \rightarrow C$ and $B \rightarrow C$ both direct 301s).
+  * Preserved `#pXXX` post anchors and query parameters seamlessly across historical 301 canonical redirects.
+
 ---
 
 ## [1.0.5] - 2026-08-16

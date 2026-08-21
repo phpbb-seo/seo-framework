@@ -49,7 +49,10 @@ class MetadataPatternRenderer
         $rendered = preg_replace('#^\s*[\-\|\—\–]\s*#u', '', $rendered) ?? $rendered;
         $rendered = preg_replace('#\s*[\-\|\—\–]\s*$#u', '', $rendered) ?? $rendered;
 
-        // 5. Normalize whitespace
+        // 5. Decode any presentation HTML entities so the rendered result is 100% semantic raw plain text
+        $rendered = html_entity_decode($rendered, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // 6. Normalize whitespace
         $rendered = preg_replace('#\s+#u', ' ', $rendered) ?? $rendered;
 
         return trim($rendered);

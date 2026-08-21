@@ -14,10 +14,13 @@ class DefaultSlugGenerator implements SlugGeneratorInterface
         // 1. Ensure valid UTF-8
         $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
         
-        // 2. Strip HTML tags
+        // 2. Decode HTML entities to semantic plain text (e.g. &amp; -> &, &quot; -> ", etc.)
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // 3. Strip HTML tags
         $text = strip_tags($text);
         
-        // 3. Lowercase
+        // 4. Lowercase
         if ($this->options->lowercase) {
             $text = mb_strtolower($text, 'UTF-8');
         }
