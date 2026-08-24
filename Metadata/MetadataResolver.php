@@ -49,7 +49,11 @@ class MetadataResolver
             'site_desc'  => $this->normalizer->normalize($context->siteDesc, 0),
         ];
 
-        return match ($context->resourceType) {
+        // Check if context already specifies an explicit SEO title or description override
+        $overrideTitle = (string) ($context->entityData['seo_title'] ?? '');
+        $overrideDesc  = (string) ($context->entityData['meta_description'] ?? '');
+
+        $result = match ($context->resourceType) {
             'home'   => $this->resolveHome($context, $globalTokens, $pageLabel, $maxDescLen),
             'forum'  => $this->resolveForum($context, $globalTokens, $pageLabel, $maxDescLen),
             'topic'  => $this->resolveTopic($context, $globalTokens, $pageLabel, $maxDescLen),
@@ -57,6 +61,16 @@ class MetadataResolver
             'group'  => $this->resolveGroup($context, $globalTokens, $pageLabel, $maxDescLen),
             default  => new MetadataResult($this->normalizer->normalize($context->boardName, 0), ''),
         };
+
+        if ($overrideTitle !== '') {
+            $result = new MetadataResult($this->normalizer->normalize($overrideTitle, 0), $result->description);
+        }
+
+        if ($overrideDesc !== '') {
+            $result = new MetadataResult($result->title, $this->normalizer->normalize($overrideDesc, $maxDescLen));
+        }
+
+        return $result;
     }
 
     private function resolveGroup(MetadataContext $context, array $globalTokens, string $pageLabel, int $maxDescLen): MetadataResult

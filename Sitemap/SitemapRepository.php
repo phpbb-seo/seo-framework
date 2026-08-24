@@ -70,6 +70,17 @@ class SitemapRepository
         }
         $this->db->sql_freeresult($result);
 
+        // Pro Integration: Filter out forums marked as NOINDEX
+        global $phpbb_container;
+        if (!empty($filtered) && $phpbb_container && $phpbb_container->has('phpbbseo.pro.robots.repository')) {
+            /** @var \phpbbseo\pro\Robots\RobotsRepository $robotsRepo */
+            $robotsRepo = $phpbb_container->get('phpbbseo.pro.robots.repository');
+            $noindexedForums = $robotsRepo->getNoindexedForumIds();
+            if (!empty($noindexedForums)) {
+                $filtered = array_values(array_diff($filtered, $noindexedForums));
+            }
+        }
+
         return $filtered;
     }
 

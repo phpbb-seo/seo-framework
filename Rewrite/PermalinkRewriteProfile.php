@@ -79,7 +79,7 @@ class PermalinkRewriteProfile
     {
         return $this->forumPattern->generate([
             'id'   => $forumId,
-            'slug' => $slug,
+            'slug' => $this->slugGenerator->generate($slug),
         ]);
     }
 
@@ -90,7 +90,7 @@ class PermalinkRewriteProfile
     {
         return $this->topicPattern->generate([
             'id'   => $topicId,
-            'slug' => $slug,
+            'slug' => $this->slugGenerator->generate($slug),
         ]);
     }
 

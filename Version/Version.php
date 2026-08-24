@@ -8,7 +8,7 @@ namespace phpbbseo\framework\Version;
  */
 final class Version
 {
-    public const VERSION = '1.0.6';
+    public const VERSION = '1.0.7';
     public const EDITION = 'Lite';
     public const NAME = 'phpBB SEO Framework';
     public const REPOSITORY = 'phpbb-seo/seo-framework';

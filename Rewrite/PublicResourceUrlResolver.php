@@ -156,11 +156,6 @@ class PublicResourceUrlResolver
                     $seoPath = $this->permalinkProfile->generateTopicUrl($id);
                 }
                 $excludeKeys = ['t', 'start', 'p'];
-                // If this topic target was passed with a post_id and anchor is empty, set #p{id}
-                $postId = isset($parsedParams['p']) ? (int) $parsedParams['p'] : ($pagination['post_id'] ?? 0);
-                if ($anchor === '' && $postId > 0) {
-                    $anchor = '#p' . $postId;
-                }
                 break;
 
             case 'post':

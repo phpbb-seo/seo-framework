@@ -153,10 +153,9 @@ if (is_array($routes) && !empty($routes)) {
 // Unmatched requests (e.g. extension routes, /sitemap.xml, /app.php/help/faq) pass to app.php
 $appScript = ($boardDir ?? '') !== '' ? $boardDir . '/app.php' : '/app.php';
 $_SERVER['SCRIPT_NAME']     = $appScript;
-$_SERVER['PHP_SELF']        = $appScript;
+$_SERVER['PHP_SELF']        = $appScript . ($path !== '' ? $path : '');
 $_SERVER['SCRIPT_FILENAME'] = $phpbbRootPath . 'app.php';
-$_SERVER['REQUEST_URI']     = $_SERVER['REQUEST_URI'] ?? '/app.php';
-$_SERVER['PATH_INFO']       = '';
+$_SERVER['PATH_INFO']       = $path !== '' ? $path : '';
 
 require $phpbbRootPath . 'app.php';
 exit;

@@ -33,19 +33,34 @@ class main_module
         // Extract clean board base URL for real-time preview computation
         $boardUrl = generate_board_url();
 
+        // Base clean URL for sidebar navigation links across modules
+        $baseAction = $this->u_action;
+        $cleanAction = preg_replace('/&amp;mode=[a-z0-9_]+/i', '', $baseAction);
+        $cleanAction = preg_replace('/&mode=[a-z0-9_]+/i', '', $cleanAction);
+        $cleanActionNoModule = preg_replace('/&amp;i=[^&]+/i', '', $cleanAction);
+        $cleanActionNoModule = preg_replace('/&i=[^&]+/i', '', $cleanActionNoModule);
+
         $template->assign_vars([
-            'PSEO_ACTIVE_MODE'      => $mode,
-            'PSEO_BASE_URL'         => $boardUrl,
-            'PSEO_VERSION'          => Version::getVersion(),
-            'PSEO_EDITION'          => Version::getEdition(),
-            'PSEO_ASSET_VERSION'    => Version::getVersion(),
-            'PSEO_FULL_VERSION'     => Version::getFullVersionString(),
-            'U_ACTION_DASHBOARD'    => $this->u_action . '&amp;mode=dashboard',
-            'U_ACTION_PERMALINKS'   => $this->u_action . '&amp;mode=permalinks',
-            'U_ACTION_TITLES_META'  => $this->u_action . '&amp;mode=titles_meta',
-            'U_ACTION_SITEMAP'      => $this->u_action . '&amp;mode=sitemap',
-            'S_SEO_ENABLED'         => $configProvider->isEnabled(),
-            'S_REWRITE_ENABLED'     => $configProvider->isRewriteEnabled(),
+            'PSEO_ACTIVE_MODE'         => $mode,
+            'PSEO_BASE_URL'            => $boardUrl,
+            'PSEO_VERSION'             => Version::getVersion(),
+            'PSEO_EDITION'             => Version::getEdition(),
+            'PSEO_ASSET_VERSION'       => Version::getVersion() . '.' . time(),
+            'PSEO_FULL_VERSION'        => Version::getFullVersionString(),
+            'U_ACTION_DASHBOARD'       => $this->u_action . '&amp;mode=dashboard',
+            'U_ACTION_PERMALINKS'      => $this->u_action . '&amp;mode=permalinks',
+            'U_ACTION_TITLES_META'     => $this->u_action . '&amp;mode=titles_meta',
+            'U_ACTION_SITEMAP'         => $this->u_action . '&amp;mode=sitemap',
+            'U_ACTION_PRO_OVERVIEW'    => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=overview',
+            'U_ACTION_PRO_ANALYZER'    => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=analyzer',
+            'U_ACTION_PRO_TITLES_META' => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=titles_meta',
+            'U_ACTION_PRO_SCHEMA'      => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=schema',
+            'U_ACTION_PRO_GSC'         => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=gsc',
+            'U_ACTION_PRO_MONITOR_404' => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=monitor_404',
+            'U_ACTION_PRO_REDIRECTS'   => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=redirects',
+            'U_ACTION_PRO_ROBOTS'      => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=robots',
+            'S_SEO_ENABLED'            => $configProvider->isEnabled(),
+            'S_REWRITE_ENABLED'        => $configProvider->isRewriteEnabled(),
         ]);
 
         switch ($mode) {

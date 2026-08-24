@@ -43,27 +43,63 @@
 			<div class="pseo-nav-group">
 				<span class="pseo-nav-label">{L_SEO_NAV_PRO}</span>
 				<ul class="pseo-nav-list">
-					<li class="pseo-nav-item is-disabled">
-						<a href="javascript:void(0);">
-							<span>{L_SEO_NAV_SOCIAL}</span>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'overview' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_OVERVIEW}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_OVERVIEW -->{L_ACP_PHPBBSEO_PRO_OVERVIEW}<!-- ELSE -->Pro Overview<!-- ENDIF --></span>
 							<span class="pseo-badge pseo-badge--pro">PRO</span>
 						</a>
 					</li>
-					<li class="pseo-nav-item is-disabled">
-						<a href="javascript:void(0);">
-							<span>{L_SEO_NAV_SCHEMA}</span>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'analyzer' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_ANALYZER}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_ANALYZER -->{L_ACP_PHPBBSEO_PRO_ANALYZER}<!-- ELSE -->SEO Analyzer<!-- ENDIF --></span>
 							<span class="pseo-badge pseo-badge--pro">PRO</span>
 						</a>
 					</li>
-					<li class="pseo-nav-item is-disabled">
-						<a href="javascript:void(0);">
-							<span>{L_SEO_NAV_REDIRECTS}</span>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'titles_meta' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_TITLES_META}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_TITLES_META -->{L_ACP_PHPBBSEO_PRO_TITLES_META}<!-- ELSE -->Titles & Meta Pro<!-- ENDIF --></span>
 							<span class="pseo-badge pseo-badge--pro">PRO</span>
 						</a>
 					</li>
-					<li class="pseo-nav-item is-disabled">
-						<a href="javascript:void(0);">
-							<span>{L_SEO_NAV_ANALYZER}</span>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'social' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_SOCIAL}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_SOCIAL -->{L_ACP_PHPBBSEO_PRO_SOCIAL}<!-- ELSE -->{L_SEO_NAV_SOCIAL}<!-- ENDIF --></span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'schema' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_SCHEMA}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_SCHEMA -->{L_ACP_PHPBBSEO_PRO_SCHEMA}<!-- ELSE -->Advanced Schema<!-- ENDIF --></span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'gsc' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_GSC}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_GSC -->{L_ACP_PHPBBSEO_PRO_GSC}<!-- ELSE -->Search Console<!-- ENDIF --></span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'monitor_404' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_MONITOR_404}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_404_TITLE -->{L_ACP_PHPBBSEO_PRO_404_TITLE}<!-- ELSE -->404 Monitor<!-- ENDIF --></span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'redirects' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_REDIRECTS}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_REDIRECTS_TITLE -->{L_ACP_PHPBBSEO_PRO_REDIRECTS_TITLE}<!-- ELSE -->{L_SEO_NAV_REDIRECTS}<!-- ENDIF --></span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'robots' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_ROBOTS}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_ROBOTS_TITLE -->{L_ACP_PHPBBSEO_PRO_ROBOTS_TITLE}<!-- ELSE -->{L_SEO_NAV_ROBOTS}<!-- ENDIF --></span>
+							<span class="pseo-badge pseo-badge--pro">PRO</span>
+						</a>
+					</li>
+					<li class="pseo-nav-item <!-- IF PSEO_ACTIVE_MODE == 'indexnow' -->is-active<!-- ENDIF -->">
+						<a href="{U_ACTION_PRO_INDEXNOW}">
+							<span><!-- IF L_ACP_PHPBBSEO_PRO_INDEXNOW -->{L_ACP_PHPBBSEO_PRO_INDEXNOW}<!-- ELSE -->{L_SEO_NAV_INDEXNOW}<!-- ENDIF --></span>
 							<span class="pseo-badge pseo-badge--pro">PRO</span>
 						</a>
 					</li>

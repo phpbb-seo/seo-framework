@@ -34,12 +34,12 @@ class MetadataListener implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            'core.viewtopic_modify_page_title'               => 'onViewtopicModifyTitle',
-            'core.viewforum_modify_page_title'               => 'onViewforumModifyTitle',
-            'core.memberlist_view_profile'                   => 'onMemberlistViewProfile',
+            'core.viewtopic_modify_page_title'                  => 'onViewtopicModifyTitle',
+            'core.viewforum_modify_page_title'                  => 'onViewforumModifyTitle',
+            'core.memberlist_view_profile'                      => 'onMemberlistViewProfile',
             'core.memberlist_modify_view_profile_template_vars' => 'onMemberlistViewProfileVars',
-            'core.page_header'                               => 'onPageHeader',
-            'core.page_header_after'                         => 'onPageHeaderAfter',
+            'core.page_header'                                  => 'onPageHeader',
+            'core.page_header_after'                            => 'onPageHeaderAfter',
         ];
     }
 
@@ -55,6 +55,8 @@ class MetadataListener implements EventSubscriberInterface
                 'forum_name'          => (string) ($topicData['forum_name'] ?? ''),
                 'forum_id'            => (int) ($topicData['forum_id'] ?? 0),
                 'post_text'           => (string) ($event['post_text'] ?? ''),
+                'seo_title'           => (string) ($event['seo_title'] ?? ($topicData['seo_title'] ?? '')),
+                'meta_description'    => (string) ($event['meta_description'] ?? ($topicData['meta_description'] ?? '')),
             ];
         }
     }
@@ -64,10 +66,12 @@ class MetadataListener implements EventSubscriberInterface
         $forumData = $event['forum_data'] ?? [];
         if (!empty($forumData)) {
             $this->entityContextData = [
-                'type'       => 'forum',
-                'id'         => (int) ($forumData['forum_id'] ?? 0),
-                'forum_name' => (string) ($forumData['forum_name'] ?? ''),
-                'forum_desc' => (string) ($forumData['forum_desc'] ?? ''),
+                'type'             => 'forum',
+                'id'               => (int) ($forumData['forum_id'] ?? 0),
+                'forum_name'       => (string) ($forumData['forum_name'] ?? ''),
+                'forum_desc'       => (string) ($forumData['forum_desc'] ?? ''),
+                'seo_title'        => (string) ($event['seo_title'] ?? ($forumData['seo_title'] ?? '')),
+                'meta_description' => (string) ($event['meta_description'] ?? ($forumData['meta_description'] ?? '')),
             ];
         }
     }
@@ -142,15 +146,22 @@ class MetadataListener implements EventSubscriberInterface
 
             // Register clean output buffer filter to structure branded SEO metadata in <head>
             ob_start(function ($buffer) use ($finalEscapedTitle, $finalEscapedDesc, $finalEscapedCanonical) {
-                // Strip duplicate canonical and description tags from elsewhere in the buffer
-                if ($finalEscapedCanonical !== null) {
-                    $buffer = preg_replace('#\s*<link\s+rel=["\']canonical["\'][^>]*>\s*#si', "\n", $buffer) ?? $buffer;
-                }
-                if ($finalEscapedDesc !== null) {
-                    $buffer = preg_replace('#\s*<meta\s+name=["\']description["\'][^>]*>\s*#si', "\n", $buffer) ?? $buffer;
+                // Extract any application/ld+json script block if present (e.g. from Pro Schema)
+                $jsonLdBlock = null;
+                if (preg_match('#\s*(<script\s+type=["\']application/ld\+json["\']>.*?</script>)\s*#si', $buffer, $jsonMatches)) {
+                    $jsonLdBlock = trim($jsonMatches[1]);
+                    // Remove the standalone script block from the original location
+                    $buffer = str_replace($jsonMatches[0], "\n", $buffer);
                 }
 
-                return preg_replace_callback('#<title>(.*?)</title>#si', function ($matches) use ($finalEscapedTitle, $finalEscapedDesc, $finalEscapedCanonical) {
+                // Extract any Social SEO tags block if present (e.g. from Pro Social)
+                $socialBlock = null;
+                if (preg_match('#\s*(<!-- Social SEO by phpBB SEO Pro -->.*?<!-- /Social SEO by phpBB SEO Pro -->)\s*#si', $buffer, $socialMatches)) {
+                    $socialBlock = trim($socialMatches[1]);
+                    $buffer = str_replace($socialMatches[0], "\n", $buffer);
+                }
+
+                return preg_replace_callback('#<title>(.*?)</title>#si', function ($matches) use ($finalEscapedTitle, $finalEscapedDesc, $finalEscapedCanonical, $jsonLdBlock, $socialBlock) {
                     $prefix = '';
                     if (preg_match('#^(\(\d+\)\s*)#u', trim($matches[1]), $pMatch)) {
                         $prefix = $pMatch[1];
@@ -165,6 +176,14 @@ class MetadataListener implements EventSubscriberInterface
                     }
                     if ($finalEscapedCanonical !== null && $finalEscapedCanonical !== '') {
                         $lines[] = '<link rel="canonical" href="' . $finalEscapedCanonical . '" />';
+                    }
+                    if ($socialBlock !== null && $socialBlock !== '') {
+                        $lines[] = '';
+                        $lines[] = $socialBlock;
+                    }
+                    if ($jsonLdBlock !== null && $jsonLdBlock !== '') {
+                        $lines[] = '';
+                        $lines[] = $jsonLdBlock;
                     }
                     $lines[] = '';
                     $lines[] = '<!-- /phpBB SEO Framework -->';

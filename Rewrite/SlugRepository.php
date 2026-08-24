@@ -118,7 +118,7 @@ class SlugRepository
         $result = $this->db->sql_query($sql);
         $slugs = [];
         while ($row = $this->db->sql_fetchrow($result)) {
-            $slugs[(int) $row['resource_id']] = (string) $row['slug'];
+            $slugs[(int) $row['resource_id']] = $this->slugGenerator->generate((string) $row['slug']);
         }
         $this->db->sql_freeresult($result);
 
@@ -214,7 +214,7 @@ class SlugRepository
         $result = $this->db->sql_query($sql);
         $slugs = [];
         while ($row = $this->db->sql_fetchrow($result)) {
-            $slugs[(int) $row['resource_id']] = (string) $row['slug'];
+            $slugs[(int) $row['resource_id']] = $this->slugGenerator->generate((string) $row['slug']);
         }
         $this->db->sql_freeresult($result);
 

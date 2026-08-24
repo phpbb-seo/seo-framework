@@ -186,6 +186,13 @@ class SeoListener implements EventSubscriberInterface
             $this->entityContext->setGroups($groupSlugs);
         }
 
+        // Do not redirect view=print requests (utility print view must render directly with NOINDEX)
+        $rawUri = (string) $this->request->server('REQUEST_URI', '');
+        $view = (string) $this->request->variable('view', '');
+        if ($view === 'print' || (isset($_GET['view']) && $_GET['view'] === 'print') || str_contains($rawUri, 'view=print')) {
+            return;
+        }
+
         $context = $this->contextFactory->createFromPhpbbRequest($this->request);
         $canonicalUrl = $this->canonicalResolver->resolve($context);
         $decision = $this->redirectResolver->resolve($context, $canonicalUrl, $this->urlSafetyValidator);
@@ -415,6 +422,13 @@ class SeoListener implements EventSubscriberInterface
             return;
         }
 
+        // Bypass legacy rewrite redirects for utility pages (e.g. view=print must render directly with NOINDEX)
+        $rawUri = (string) $this->request->server('REQUEST_URI', '');
+        $view = (string) $this->request->variable('view', '');
+        if ($view === 'print' || (isset($_GET['view']) && $_GET['view'] === 'print') || str_contains($rawUri, 'view=print')) {
+            return;
+        }
+
         // Warm EntitySeoContext from incoming request query parameters for legacy inbound redirects
         $postId = (int) $this->request->variable('p', 0, false, request_interface::GET);
         if ($postId > 0) {
@@ -471,6 +485,13 @@ class SeoListener implements EventSubscriberInterface
             $pageData = $event['page_data'] ?? [];
             $pageData['U_CANONICAL'] = $canonicalUrl;
             $event['page_data'] = $pageData;
+        }
+
+        // Do not redirect view=print requests (utility print view must render directly with NOINDEX)
+        $rawUri = (string) $this->request->server('REQUEST_URI', '');
+        $view = (string) $this->request->variable('view', '');
+        if ($view === 'print' || (isset($_GET['view']) && $_GET['view'] === 'print') || str_contains($rawUri, 'view=print')) {
+            return;
         }
 
         $decision = $this->redirectResolver->resolve($context, $canonicalUrl, $this->urlSafetyValidator);

@@ -234,7 +234,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
-	max-width: 920px;
 	width: 100%;
 }
 
@@ -538,31 +537,104 @@
 	color: #92400e;
 }
 
-.pseo-update-banner--neutral {
-	background: var(--pseo-color-surface-subtle);
-	border: 1px solid var(--pseo-color-border);
-	color: var(--pseo-color-text-muted);
-}
-
-.pseo-update-content {
-	display: flex;
+/* Modern Toggle Switch Component */
+.pseo-switch {
+	position: relative;
+	display: inline-flex;
 	align-items: center;
+	cursor: pointer;
+	user-select: none;
 	gap: 10px;
 }
 
-.pseo-update-title {
-	font-weight: 700;
-	margin-bottom: 2px;
+.pseo-switch input {
+	opacity: 0;
+	width: 0;
+	height: 0;
+	position: absolute;
 }
 
-.pseo-update-desc {
-	font-size: 12px;
-	color: var(--pseo-color-text-muted);
+.pseo-switch-slider {
+	position: relative;
+	width: 44px;
+	height: 24px;
+	background-color: #cbd5e1;
+	border-radius: 24px;
+	transition: background-color 0.2s ease-in-out;
+	flex-shrink: 0;
 }
 
-.pseo-update-actions {
+.pseo-switch-slider::before {
+	content: "";
+	position: absolute;
+	height: 18px;
+	width: 18px;
+	left: 3px;
+	bottom: 3px;
+	background-color: #ffffff;
+	border-radius: 50%;
+	transition: transform 0.2s ease-in-out;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.pseo-switch input:checked + .pseo-switch-slider {
+	background-color: var(--pseo-color-success);
+}
+
+.pseo-switch input:checked + .pseo-switch-slider::before {
+	transform: translateX(20px);
+}
+
+.pseo-switch-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--pseo-color-text-main);
+}
+
+/* Module Status Hero Card */
+.pseo-module-hero {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px 20px;
+	background: var(--pseo-color-surface);
+	border: 1px solid var(--pseo-color-border);
+	border-radius: var(--pseo-radius-lg);
+	box-shadow: var(--pseo-shadow-sm);
+	margin-bottom: 20px;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.pseo-module-hero-info {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 12px;
+}
+
+.pseo-module-hero-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: var(--pseo-radius-md);
+	background: var(--pseo-color-primary-light);
+	color: var(--pseo-color-primary);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+	flex-shrink: 0;
+}
+
+.pseo-module-hero-title {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--pseo-color-text-main);
+}
+
+.pseo-module-hero-desc {
+	margin: 2px 0 0;
+	font-size: 12px;
+	color: var(--pseo-color-text-muted);
 }
 
