@@ -28,7 +28,7 @@ class PublicResourceUrlResolver
      * @param bool $isAmp Whether to format query string with HTML entity separator (&amp;)
      * @return string|null The friendly SEO URL, or null if native representation should be kept
      */
-    public function resolve(string $url, $params, bool $isAmp = true): ?string
+    public function resolve(string $url, array|string|bool $params = [], bool $isAmp = true): ?string
     {
         if (!$this->configProvider->isRewriteEnabled()) {
             return null;
@@ -72,127 +72,145 @@ class PublicResourceUrlResolver
             $parsedParams = array_merge($urlParams, $parsedParams);
         }
 
-        $script = basename(parse_url($url, PHP_URL_PATH) ?? '');
-        $allowedScripts = ['viewtopic.php', 'viewforum.php', 'memberlist.php'];
+        $rawPath = parse_url($url, PHP_URL_PATH) ?? '';
+        $boardPath = $this->getBoardPath();
 
-        // Idempotency: if URL is not a native public script, it might be an already-SEO URL
-        if (!in_array($script, $allowedScripts, true)) {
-            if (isset($parsedParams['start'])) {
-                $boardPath = $this->getBoardPath();
-                $rawPath = parse_url($url, PHP_URL_PATH) ?? '';
-                $cleanPath = '/' . ltrim(ltrim($rawPath, '.'), '/');
-                $boardPrefix = rtrim($boardPath, '/');
-                if ($boardPrefix !== '' && str_starts_with($cleanPath, $boardPrefix . '/')) {
-                    $cleanPath = substr($cleanPath, strlen($boardPrefix));
+        // If URL is an absolute web URL with host (e.g. https://...), do not alter
+        if (preg_match('#^(https?:)?//#i', $url)) {
+            return null;
+        }
+
+        // Canonicalize relative board paths (handles ../, ./, and existing board prefix across all contexts)
+        $cleanPath = $this->normalizeBoardPath($rawPath, $boardPath);
+
+        // 1. Board Index root normalization
+        if ($cleanPath === 'index.php' || $cleanPath === '') {
+            if (empty($parsedParams)) {
+                return $boardPath . ($anchor !== '' ? $anchor : '');
+            }
+            $queryString = $this->buildQueryString($parsedParams, [], $isAmp);
+            return $boardPath . 'index.php' . $queryString . $anchor;
+        }
+
+        // 2. SEO Resource Rewriting for primary entities (viewtopic, viewforum, memberlist)
+        $script = basename($cleanPath);
+        $allowedRewriteScripts = ['viewtopic.php', 'viewforum.php', 'memberlist.php'];
+
+        if (in_array($script, $allowedRewriteScripts, true)) {
+            $target = $this->detector->detect($script, $parsedParams);
+            if ($target !== null) {
+                $seoPath = null;
+                $id = $target->getId();
+                $excludeKeys = [];
+
+                switch ($target->getType()) {
+                    case 'forum':
+                        $pagination = $target->getPaginationParams();
+                        $start = $pagination['start'] ?? 0;
+                        if ($start > 0) {
+                            $topicsPerPage = (int) $this->configProvider->get('topics_per_page', '50');
+                            $seoPath = $this->permalinkProfile->generateForumPageUrl($id, $start, $topicsPerPage);
+                        } else {
+                            $seoPath = $this->permalinkProfile->generateForumUrl($id);
+                        }
+                        $excludeKeys = ['f', 'start'];
+                        break;
+
+                    case 'topic':
+                        $pagination = $target->getPaginationParams();
+                        $start = $pagination['start'] ?? 0;
+                        if ($start > 0) {
+                            $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
+                            $seoPath = $this->permalinkProfile->generateTopicPageUrl($id, $start, $postsPerPage);
+                        } else {
+                            $seoPath = $this->permalinkProfile->generateTopicUrl($id);
+                        }
+                        $excludeKeys = ['t', 'start', 'p'];
+                        break;
+
+                    case 'post':
+                        // Resolve post to its owning topic mapping
+                        $topicId = $this->permalinkProfile->getEntityContext()->getTopicIdForPost($id);
+                        if ($topicId !== null) {
+                            $seoPath = $this->permalinkProfile->generateTopicUrl($topicId);
+                            $excludeKeys = ['p'];
+                            if ($anchor === '') {
+                                $anchor = '#p' . $id;
+                            }
+                        }
+                        break;
+
+                    case 'member':
+                        $seoPath = $this->permalinkProfile->generateMemberUrl($id);
+                        $excludeKeys = ['u', 'mode'];
+                        break;
+
+                    case 'group':
+                        $seoPath = $this->permalinkProfile->generateGroupUrl($id);
+                        $excludeKeys = ['g', 'mode'];
+                        break;
                 }
-                $path = '/' . ltrim($cleanPath, '/');
 
-                // Check if it matches an already SEO-formatted topic URL
-                $match = $this->permalinkProfile->matchTopic($path);
-                if ($match !== null) {
-                    $id = (int) $match['id'];
-                    $start = (int) $parsedParams['start'];
-                    $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
-
-                    $seoPath = $this->permalinkProfile->generateTopicPageUrl($id, $start, $postsPerPage);
-                    if ($seoPath !== null) {
-                        $excludeKeys = ['start'];
-                        $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
-                        $finalUrl = $boardPath . ltrim($seoPath, '/') . $queryString . $anchor;
-                        return $this->normalizeDuplicateFragments($finalUrl);
-                    }
+                if ($seoPath !== null) {
+                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
+                    $finalUrl = $boardPath . ltrim($seoPath, '/') . $queryString . $anchor;
+                    return $this->normalizeDuplicateFragments($finalUrl);
                 }
+            }
+        }
 
-                // Check if it matches an already SEO-formatted forum URL
-                $matchForum = $this->permalinkProfile->matchForum($path);
-                if ($matchForum !== null) {
-                    $id = (int) $matchForum['id'];
-                    $start = (int) $parsedParams['start'];
-                    $topicsPerPage = (int) $this->configProvider->get('topics_per_page', '50');
+        // 3. Paginated links on already-rewritten SEO URLs (Idempotency)
+        if (isset($parsedParams['start'])) {
+            $boardPrefix = rtrim($boardPath, '/');
+            $normPath = '/' . $cleanPath;
+            if ($boardPrefix !== '' && str_starts_with($normPath, $boardPrefix . '/')) {
+                $normPath = substr($normPath, strlen($boardPrefix));
+            }
+            $path = '/' . ltrim($normPath, '/');
 
-                    $seoPath = $this->permalinkProfile->generateForumPageUrl($id, $start, $topicsPerPage);
-                    if ($seoPath !== null) {
-                        $excludeKeys = ['start'];
-                        $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
-                        $finalUrl = $boardPath . ltrim($seoPath, '/') . $queryString . $anchor;
-                        return $this->normalizeDuplicateFragments($finalUrl);
-                    }
+            // Check if it matches an already SEO-formatted topic URL
+            $match = $this->permalinkProfile->matchTopic($path);
+            if ($match !== null) {
+                $id = (int) $match['id'];
+                $start = (int) $parsedParams['start'];
+                $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
+
+                $seoPath = $this->permalinkProfile->generateTopicPageUrl($id, $start, $postsPerPage);
+                if ($seoPath !== null) {
+                    $excludeKeys = ['start'];
+                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
+                    $finalUrl = $boardPath . ltrim($seoPath, '/') . $queryString . $anchor;
+                    return $this->normalizeDuplicateFragments($finalUrl);
                 }
             }
 
-            return null;
-        }
+            // Check if it matches an already SEO-formatted forum URL
+            $matchForum = $this->permalinkProfile->matchForum($path);
+            if ($matchForum !== null) {
+                $id = (int) $matchForum['id'];
+                $start = (int) $parsedParams['start'];
+                $topicsPerPage = (int) $this->configProvider->get('topics_per_page', '50');
 
-        // 3. Detect target resource
-        $target = $this->detector->detect($script, $parsedParams);
-        if ($target === null) {
-            return null;
-        }
-
-        $seoPath = null;
-        $id = $target->getId();
-        $excludeKeys = [];
-
-        switch ($target->getType()) {
-            case 'forum':
-                $pagination = $target->getPaginationParams();
-                $start = $pagination['start'] ?? 0;
-                if ($start > 0) {
-                    $topicsPerPage = (int) $this->configProvider->get('topics_per_page', '50');
-                    $seoPath = $this->permalinkProfile->generateForumPageUrl($id, $start, $topicsPerPage);
-                } else {
-                    $seoPath = $this->permalinkProfile->generateForumUrl($id);
+                $seoPath = $this->permalinkProfile->generateForumPageUrl($id, $start, $topicsPerPage);
+                if ($seoPath !== null) {
+                    $excludeKeys = ['start'];
+                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
+                    $finalUrl = $boardPath . ltrim($seoPath, '/') . $queryString . $anchor;
+                    return $this->normalizeDuplicateFragments($finalUrl);
                 }
-                $excludeKeys = ['f', 'start'];
-                break;
-
-            case 'topic':
-                $pagination = $target->getPaginationParams();
-                $start = $pagination['start'] ?? 0;
-                if ($start > 0) {
-                    $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
-                    $seoPath = $this->permalinkProfile->generateTopicPageUrl($id, $start, $postsPerPage);
-                } else {
-                    $seoPath = $this->permalinkProfile->generateTopicUrl($id);
-                }
-                $excludeKeys = ['t', 'start', 'p'];
-                break;
-
-            case 'post':
-                // Resolve post to its owning topic mapping
-                $topicId = $this->permalinkProfile->getEntityContext()->getTopicIdForPost($id);
-                if ($topicId !== null) {
-                    $seoPath = $this->permalinkProfile->generateTopicUrl($topicId);
-                    $excludeKeys = ['p'];
-                    if ($anchor === '') {
-                        $anchor = '#p' . $id;
-                    }
-                }
-                break;
-
-            case 'member':
-                $seoPath = $this->permalinkProfile->generateMemberUrl($id);
-                $excludeKeys = ['u', 'mode'];
-                break;
-
-            case 'group':
-                $seoPath = $this->permalinkProfile->generateGroupUrl($id);
-                $excludeKeys = ['g', 'mode'];
-                break;
+            }
         }
 
-        if ($seoPath === null) {
-            return null;
+        // 4. Generic root-aware resolution for ALL other phpBB / ACP / Controller / Extension URLs
+        // Any board-relative path is safely rooted to $boardPath to prevent browser-relative distortions across nested SEO paths.
+        $boardPrefix = rtrim($boardPath, '/');
+        $normClean = '/' . $cleanPath;
+        if ($boardPrefix !== '' && str_starts_with($normClean, $boardPrefix . '/')) {
+            $cleanPath = ltrim(substr($normClean, strlen($boardPrefix)), '/');
         }
 
-        // 4. Build extra query string (preserving tracking parameters, sid, etc.)
-        $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
-
-        // 5. Prepend board root prefix (e.g. "/phpbb/") for root-relative link safety across all URL depths
-        $base = $this->getBoardPath();
-        $seoUrl = $base . ltrim($seoPath, '/');
-
-        $finalUrl = $seoUrl . $queryString . $anchor;
+        $queryString = $this->buildQueryString($parsedParams, [], $isAmp);
+        $finalUrl = $boardPath . $cleanPath . $queryString . $anchor;
         return $this->normalizeDuplicateFragments($finalUrl);
     }
 
@@ -240,5 +258,34 @@ class PublicResourceUrlResolver
             $this->boardPath = rtrim($path, '/') . '/';
         }
         return $this->boardPath;
+    }
+
+    /**
+     * Normalizes path traversals and board prefixes into a clean board-relative path.
+     */
+    private function normalizeBoardPath(string $rawPath, string $boardPath): string
+    {
+        $rawPath = str_replace('\\', '/', $rawPath);
+        
+        $boardPrefix = rtrim($boardPath, '/');
+        if ($boardPrefix !== '' && str_starts_with($rawPath, $boardPrefix . '/')) {
+            $rawPath = substr($rawPath, strlen($boardPrefix));
+        }
+
+        $segments = explode('/', $rawPath);
+        $cleanSegments = [];
+        foreach ($segments as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+            if ($segment === '..') {
+                if (!empty($cleanSegments)) {
+                    array_pop($cleanSegments);
+                }
+            } else {
+                $cleanSegments[] = $segment;
+            }
+        }
+        return implode('/', $cleanSegments);
     }
 }

@@ -27,10 +27,7 @@ $phpbbRootPath = rtrim(str_replace('\\', '/', $rawRoot), '/') . '/';
 $phpbb_root_path = './';
 $phpEx = 'php';
 
-// Enable phpBB native board-root URL asset resolution for clean SEO paths
-if (!defined('PHPBB_USE_BOARD_URL_PATH')) {
-    define('PHPBB_USE_BOARD_URL_PATH', true);
-}
+
 
 $cacheFile = __DIR__ . '/store/compiled_routes.php';
 
@@ -70,23 +67,75 @@ if ($routes === null || (!is_array($routes) && !file_exists($cacheFile))) {
     @file_put_contents($cacheFile, "<?php\n// Auto-generated route cache.\ndeclare(strict_types=1);\n\nreturn " . var_export($routes, true) . ";\n");
 }
 
-if (is_array($routes) && !empty($routes)) {
-    $rawUri = $_SERVER['REQUEST_URI'] ?? '';
-    $qPos = strpos($rawUri, '?');
-    $path = ($qPos !== false) ? substr($rawUri, 0, $qPos) : $rawUri;
-    $path = rawurldecode($path);
+$rawUri = $_SERVER['REQUEST_URI'] ?? '';
+$qPos = strpos($rawUri, '?');
+$path = ($qPos !== false) ? substr($rawUri, 0, $qPos) : $rawUri;
+$path = rawurldecode($path);
 
-    // Determine board web path prefix (e.g. "/phpbb/ext/..." -> "/phpbb", "/ext/..." -> "")
-    $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
-    $extSubPath = '/ext/phpbbseo/framework/rewrite.php';
-    $pos = strrpos($scriptName, $extSubPath);
-    $boardDir = ($pos !== false) ? substr($scriptName, 0, $pos) : '';
-    $boardDir = rtrim($boardDir, '/');
+// Determine board web path prefix (e.g. "/phpbb/ext/..." -> "/phpbb", "/ext/..." -> "")
+$scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+$extSubPath = '/ext/phpbbseo/framework/rewrite.php';
+$pos = strrpos($scriptName, $extSubPath);
+$boardDir = ($pos !== false) ? substr($scriptName, 0, $pos) : '';
+$boardDir = rtrim($boardDir, '/');
 
-    if ($boardDir !== '' && str_starts_with($path, $boardDir . '/')) {
-        $path = substr($path, strlen($boardDir));
+if ($boardDir !== '' && str_starts_with($path, $boardDir . '/')) {
+    $path = substr($path, strlen($boardDir));
+}
+
+// 1. Intercept and route native operational endpoints (e.g. relative resolution from deep SEO URLs)
+$nativeScriptMap = [
+    'adm/index.php'     => 'adm/index.php',
+    'download/file.php' => 'download/file.php',
+    'file.php'          => 'download/file.php',
+    'posting.php'       => 'posting.php',
+    'mcp.php'           => 'mcp.php',
+    'ucp.php'           => 'ucp.php',
+    'report.php'        => 'report.php',
+    'cron.php'          => 'cron.php',
+    'viewtopic.php'     => 'viewtopic.php',
+    'viewforum.php'     => 'viewforum.php',
+    'memberlist.php'    => 'memberlist.php',
+];
+
+if (preg_match('#(?:^|/)(adm/index\.php|download/file\.php|file\.php|posting\.php|mcp\.php|ucp\.php|report\.php|cron\.php|viewtopic\.php|viewforum\.php|memberlist\.php)$#i', $path, $nativeMatch)) {
+    $matchedKey = strtolower($nativeMatch[1]);
+    if (isset($nativeScriptMap[$matchedKey])) {
+        $targetScript = $nativeScriptMap[$matchedKey];
+        if (is_file($phpbbRootPath . $targetScript)) {
+            $internalScript = ($boardDir !== '') ? $boardDir . '/' . $targetScript : '/' . $targetScript;
+            $internalQuery = http_build_query($_GET);
+            $_SERVER['SCRIPT_NAME']     = $internalScript;
+            $_SERVER['PHP_SELF']        = $internalScript;
+            $_SERVER['SCRIPT_FILENAME'] = $phpbbRootPath . $targetScript;
+            $_SERVER['REQUEST_URI']     = $internalScript . ($internalQuery !== '' ? '?' . $internalQuery : '');
+            $_SERVER['PATH_INFO']       = '';
+
+            if ($targetScript === 'download/file.php') {
+                @chdir($phpbbRootPath . 'download');
+            } elseif ($targetScript === 'adm/index.php') {
+                @chdir($phpbbRootPath . 'adm');
+            }
+
+            require $phpbbRootPath . $targetScript;
+            exit;
+        }
     }
+}
 
+// 2. Intercept and redirect relative static asset requests from deep SEO URL paths
+if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)) {
+    $assetRelPath = $assetMatch[1] . '/' . $assetMatch[2];
+    $fullAssetPath = $phpbbRootPath . $assetRelPath;
+    if (is_file($fullAssetPath)) {
+        $targetAssetUrl = ($boardDir !== '') ? $boardDir . '/' . $assetRelPath : '/' . $assetRelPath;
+        header('Location: ' . $targetAssetUrl, true, 301);
+        exit;
+    }
+}
+
+// 2. Inbound SEO URL Route Matching
+if (is_array($routes) && !empty($routes)) {
     foreach ($routes as $route) {
         if (preg_match($route['regex'], $path, $matches)) {
             $resource = $route['resource'];
@@ -129,13 +178,13 @@ if (is_array($routes) && !empty($routes)) {
                     $_REQUEST['seo_page'] = (string) $page;
                 }
 
-                // 1. Preserve original public SEO URI for Framework RequestContextFactory & canonical checks
+                // Preserve original public SEO URI for Framework RequestContextFactory & canonical checks
                 $_SERVER['SEO_PUBLIC_REQUEST_URI'] = $_SERVER['REQUEST_URI'];
 
-                // 2. Build internal query string
+                // Build internal query string
                 $internalQuery = http_build_query($_GET);
 
-                // 3. Normalize internal phpBB execution context
+                // Normalize internal phpBB execution context
                 $internalScript = ($boardDir !== '') ? $boardDir . '/' . $targetScript : '/' . $targetScript;
                 $_SERVER['SCRIPT_NAME']     = $internalScript;
                 $_SERVER['PHP_SELF']        = $internalScript;
@@ -150,12 +199,17 @@ if (is_array($routes) && !empty($routes)) {
     }
 }
 
-// Unmatched requests (e.g. extension routes, /sitemap.xml, /app.php/help/faq) pass to app.php
-$appScript = ($boardDir ?? '') !== '' ? $boardDir . '/app.php' : '/app.php';
+// 3. Controller Routes (e.g. extension routes, /sitemap.xml, /app.php/demo, /app.php/help/faq)
+$appPath = $path;
+if (preg_match('#(?:^|/)app\.php(/.*)?$#i', $path, $appMatch)) {
+    $appPath = $appMatch[1] ?? '';
+}
+
+$appScript = ($boardDir !== '') ? $boardDir . '/app.php' : '/app.php';
 $_SERVER['SCRIPT_NAME']     = $appScript;
-$_SERVER['PHP_SELF']        = $appScript . ($path !== '' ? $path : '');
+$_SERVER['PHP_SELF']        = $appScript . ($appPath !== '' ? $appPath : '');
 $_SERVER['SCRIPT_FILENAME'] = $phpbbRootPath . 'app.php';
-$_SERVER['PATH_INFO']       = $path !== '' ? $path : '';
+$_SERVER['PATH_INFO']       = $appPath !== '' ? $appPath : '';
 
 require $phpbbRootPath . 'app.php';
 exit;

@@ -32,7 +32,26 @@ class RedirectResolver
         $normalizedCanonical = $validator->normalizeUrl($canonicalUrl);
 
         if ($normalizedCurrent !== $normalizedCanonical) {
-            return new RedirectDecision($canonicalUrl, 301, RedirectReason::CANONICAL_MISMATCH);
+            $targetUrl = $canonicalUrl;
+            if (!empty($context->query)) {
+                $cleanQuery = str_replace('&amp;', '&', $context->query);
+                parse_str($cleanQuery, $queryParams);
+                $excludeParams = ['t', 'f', 'p', 'u', 'g', 'start', 'sid', 'mode', 'seo_page'];
+                foreach ($excludeParams as $ep) {
+                    unset($queryParams[$ep]);
+                    unset($queryParams['amp;' . $ep]);
+                }
+                if (!empty($queryParams)) {
+                    $targetUrl .= (str_contains($targetUrl, '?') ? '&' : '?') . http_build_query($queryParams);
+                }
+            }
+
+            $normalizedTarget = $validator->normalizeUrl($targetUrl);
+            if ($normalizedTarget === $normalizedCurrent) {
+                return null;
+            }
+
+            return new RedirectDecision($targetUrl, 301, RedirectReason::CANONICAL_MISMATCH);
         }
 
         return null;

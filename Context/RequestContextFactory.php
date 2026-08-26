@@ -30,7 +30,7 @@ class RequestContextFactory
         }
         $qPos = strpos($rawUri, '?');
         $rawPath = ($qPos !== false) ? substr($rawUri, 0, $qPos) : $rawUri;
-        $rawQuery = ($qPos !== false) ? substr($rawUri, $qPos + 1) : '';
+        $rawQuery = ($qPos !== false) ? substr($rawUri, $qPos + 1) : $request->server('QUERY_STRING', '');
 
         $path = $this->sanitizePath($rawPath !== '' ? $rawPath : $request->server('SCRIPT_NAME', ''));
         $query = $this->sanitizeQuery($rawQuery);

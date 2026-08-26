@@ -67,7 +67,8 @@ class SeoListener implements EventSubscriberInterface
             'core.delete_user_after'                    => 'onDeleteUserAfter',
             'core.user_add_after'                       => 'onUserAddAfter',
             'core.ucp_register_register_after'          => 'onUserAddAfter',
-            'core.update_username'                      => 'onUpdateUsername',
+            'core.login_box_modify_template_data'       => 'onLoginBoxModifyTemplateData',
+            'core.login_box_redirect'                   => 'onLoginBoxRedirect',
             'core.acp_manage_forums_update_data_after'  => 'onForumUpdateAfter',
             'core.delete_forum_content_before_query'    => 'onForumDeleteBefore',
             'core.acp_manage_group_request_data'        => 'onGroupUpdateAfter',
@@ -81,14 +82,8 @@ class SeoListener implements EventSubscriberInterface
 
     public function onCommon($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled()) {
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN')) {
             return;
-        }
-
-        // Establish board-root URL context early so operational endpoints (e.g. mcp.php, posting.php)
-        // generate absolute/board-rooted URLs rather than relative paths that break under nested SEO URLs.
-        if (!defined('PHPBB_USE_BOARD_URL_PATH') && !defined('IN_ADMIN') && !defined('IN_INSTALL') && !defined('IN_CRON')) {
-            define('PHPBB_USE_BOARD_URL_PATH', true);
         }
 
         $seoPage = (int) $this->request->variable('seo_page', 0, false, request_interface::GET);
@@ -116,7 +111,7 @@ class SeoListener implements EventSubscriberInterface
 
     public function onUserSetup($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled()) {
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN')) {
             return;
         }
 
@@ -400,6 +395,10 @@ class SeoListener implements EventSubscriberInterface
 
     public function onPageHeader($event): void
     {
+        if (defined('ADMIN_START') || defined('IN_ADMIN') || str_contains((string) $this->request->server('SCRIPT_NAME', ''), '/adm/')) {
+            return;
+        }
+
         try {
             $this->user->add_lang_ext('phpbbseo/framework', 'acp_seo');
             $poweredByFormat = $this->user->lang('SEO_POWERED_BY');
@@ -508,7 +507,7 @@ class SeoListener implements EventSubscriberInterface
 
     public function onAppendSid($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled()) {
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN') || str_contains((string) $this->request->server('SCRIPT_NAME', ''), '/adm/')) {
             return;
         }
 
@@ -524,6 +523,18 @@ class SeoListener implements EventSubscriberInterface
         $page = (string) ($event['url'] ?? '');
         $params = $event['params'] ?? [];
         $isAmp = (bool) ($event['is_amp'] ?? true);
+        $sessionId = $event['session_id'] ?? false;
+
+        // If a session ID is explicitly requested (e.g. for ACP or non-cookie users), attach it to params
+        if ($sessionId !== false && $sessionId !== '') {
+            if (is_array($params)) {
+                $params['sid'] = (string) $sessionId;
+            } elseif (is_string($params)) {
+                $params .= ($params !== '' ? '&' : '') . 'sid=' . (string) $sessionId;
+            } else {
+                $params = ['sid' => (string) $sessionId];
+            }
+        }
 
         $seoUrl = $this->urlResolver->resolve($page, $params, $isAmp);
 
@@ -645,6 +656,31 @@ class SeoListener implements EventSubscriberInterface
         $groupId = (int) ($event['group_id'] ?? 0);
         if ($groupId > 0) {
             $this->slugRepository->deleteSlug('group', $groupId);
+        }
+    }
+
+    public function onLoginBoxModifyTemplateData($event): void
+    {
+        $isAdmin = (bool) ($event['admin'] ?? false);
+        if ($isAdmin || defined('ADMIN_START') || defined('IN_ADMIN')) {
+            $templateData = $event['login_box_template_data'] ?? [];
+            $phpEx = (string) $this->configProvider->get('php_ext', 'php');
+            $adminPath = (defined('PHPBB_ADMIN_PATH') ? PHPBB_ADMIN_PATH : (defined('ADMIN_START') ? './' : 'adm/')) . 'index.' . $phpEx;
+            $templateData['S_LOGIN_ACTION'] = append_sid($adminPath, false, true, $this->user->session_id);
+            $event['login_box_template_data'] = $templateData;
+        }
+    }
+
+    public function onLoginBoxRedirect($event): void
+    {
+        $isAdmin = (bool) ($event['admin'] ?? false);
+        if ($isAdmin || defined('ADMIN_START') || defined('IN_ADMIN')) {
+            $redirect = (string) ($event['redirect'] ?? '');
+            if (empty($redirect) || $redirect === './../?' || $redirect === '/?' || $redirect === './../index.php' || $redirect === 'index.php' || str_ends_with($redirect, '/?')) {
+                $phpEx = (string) $this->configProvider->get('php_ext', 'php');
+                $adminPath = (defined('PHPBB_ADMIN_PATH') ? PHPBB_ADMIN_PATH : (defined('ADMIN_START') ? './' : 'adm/')) . 'index.' . $phpEx;
+                $event['redirect'] = $adminPath;
+            }
         }
     }
 }
