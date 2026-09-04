@@ -44,6 +44,7 @@ services:
             - '@phpbbseo.framework.rewrite.url_pattern_compiler'
             - '@phpbbseo.framework.rewrite.pattern_conflict_detector'
             - '%core.root_path%ext/phpbbseo/framework/store/'
+            - '@phpbbseo.framework.configuration.provider'
 
     phpbbseo.framework.url.pagination_resolver:
         class: phpbbseo\framework\Url\PaginationResolver
@@ -61,10 +62,18 @@ services:
             - '@phpbbseo.framework.url.pagination_resolver'
             - '@phpbbseo.framework.configuration.provider'
 
+    phpbbseo.framework.migration.usu_resolver:
+        class: phpbbseo\framework\Migration\UsuMigrationResolver
+        arguments:
+            - '@phpbbseo.framework.url.pagination_resolver'
+            - '@phpbbseo.framework.configuration.provider'
+            - '@router'
+
     phpbbseo.framework.rewrite.inbound_route_resolver:
         class: phpbbseo\framework\Rewrite\InboundRouteResolver
         arguments:
             - '@phpbbseo.framework.rewrite.permalink_profile'
+            - '@phpbbseo.framework.migration.usu_resolver'
 
     phpbbseo.framework.rewrite.resource_detector:
         class: phpbbseo\framework\Rewrite\ResourceDetector
@@ -197,5 +206,16 @@ services:
         class: phpbbseo\framework\Update\UpdateChecker
         arguments:
             - '@cache.driver'
+
+    # ── Safe Uninstall ────────────────────────────────────────────────────────
+
+    phpbbseo.framework.safe_uninstall.manager:
+        class: phpbbseo\framework\SafeUninstall\SafeUninstallManager
+        arguments:
+            - '%core.root_path%'
+            - '@phpbbseo.framework.rewrite.permalink_configuration'
+            - '@config'
+            - '@cache.driver'
+            - '@phpbbseo.framework.rewrite.route_cache_compiler'
 
 

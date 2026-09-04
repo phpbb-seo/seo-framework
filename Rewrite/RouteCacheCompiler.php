@@ -5,6 +5,7 @@ namespace phpbbseo\framework\Rewrite;
 
 use RuntimeException;
 use InvalidArgumentException;
+use phpbbseo\framework\Configuration\ConfigurationProvider;
 
 /**
  * Compiles permalink patterns into regexes and atomically writes the pre-bootstrap
@@ -15,7 +16,8 @@ class RouteCacheCompiler
     public function __construct(
         private readonly UrlPatternCompiler $patternCompiler,
         private readonly PatternConflictDetector $conflictDetector,
-        private readonly string $storeDir
+        private readonly string $storeDir,
+        private readonly ?ConfigurationProvider $configProvider = null
     ) {}
 
     /**
@@ -23,10 +25,11 @@ class RouteCacheCompiler
      *
      * @param array<string, string> $patterns Array of resource => raw pattern
      * @param array<string, string> $prevPatterns Array of resource => previously active raw pattern (for legacy 301 support)
+     * @param bool|null $legacyUsuEnabled Explicit toggle for legacy USU routes (null = read from configProvider)
      * @throws InvalidArgumentException if validation or conflict detection fails
      * @throws RuntimeException if disk write or atomic rename fails
      */
-    public function compileAndDump(array $patterns, array $prevPatterns = []): void
+    public function compileAndDump(array $patterns, array $prevPatterns = [], ?bool $legacyUsuEnabled = null): void
     {
         // 1. Validate and compile all active patterns in memory
         $compiledPatterns = [];
@@ -81,6 +84,62 @@ class RouteCacheCompiler
                     'legacy'   => true,
                 ];
             }
+        }
+
+        if ($legacyUsuEnabled === null) {
+            $legacyUsuEnabled = $this->configProvider !== null ? $this->configProvider->isLegacyUsuEnabled() : false;
+        }
+
+        // Add legacy Ultimate SEO URLs (USU) migration routes for 301 redirection
+        if ($legacyUsuEnabled) {
+            $routes[] = [
+                'regex'    => '#^(?:.*/)?(?P<slug>[^/]+?)-t(?P<id>[0-9]+)-(?:s)?(?P<start>[0-9]+)\.html$#i',
+                'resource' => 'topic',
+                'is_page'  => false,
+                'legacy'   => true,
+            ];
+            $routes[] = [
+                'regex'    => '#^(?:.*/)?(?P<slug>[^/]+?)-t(?P<id>[0-9]+)\.html$#i',
+                'resource' => 'topic',
+                'is_page'  => false,
+                'legacy'   => true,
+            ];
+            $routes[] = [
+                'regex'    => '#^(?:.*/)?(?:topic|t)(?P<id>[0-9]+)(?:-(?:s)?(?P<start>[0-9]+))?\.html$#i',
+                'resource' => 'topic',
+                'is_page'  => false,
+                'legacy'   => true,
+            ];
+            $routes[] = [
+                'regex'    => '#^(?:.*/)?(?P<slug>[^/]+?)-f(?P<id>[0-9]+)-(?:s)?(?P<start>[0-9]+)\.html$#i',
+                'resource' => 'forum',
+                'is_page'  => false,
+                'legacy'   => true,
+            ];
+            $routes[] = [
+                'regex'    => '#^(?:.*/)?(?P<slug>[^/]+?)-f(?P<id>[0-9]+)\.html$#i',
+                'resource' => 'forum',
+                'is_page'  => false,
+                'legacy'   => true,
+            ];
+            $routes[] = [
+                'regex'    => '#^(?:.*/)?(?:forum|f)(?P<id>[0-9]+)(?:-(?:s)?(?P<start>[0-9]+))?\.html$#i',
+                'resource' => 'forum',
+                'is_page'  => false,
+                'legacy'   => true,
+            ];
+            $routes[] = [
+                'regex'    => '#^(?:.*/)?(?:member|user|(?P<slug>[^/]+?)-u|u)(?P<id>[0-9]+)\.html$#i',
+                'resource' => 'member',
+                'is_page'  => false,
+                'legacy'   => true,
+            ];
+            $routes[] = [
+                'regex'    => '#^(?:.*/)?(?:post|p)(?P<id>[0-9]+)\.html$#i',
+                'resource' => 'post',
+                'is_page'  => false,
+                'legacy'   => true,
+            ];
         }
 
         // 4. Ensure store directory exists

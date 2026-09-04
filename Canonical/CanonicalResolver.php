@@ -83,6 +83,16 @@ class CanonicalResolver
 
             case 'group':
                 return $this->permalinkProfile->generateGroupUrl($route->id);
+
+            case 'post':
+                $topicId = $this->permalinkProfile->getEntityContext()->getTopicIdForPost($route->id);
+                if ($topicId !== null) {
+                    $topicUrl = $this->permalinkProfile->generateTopicUrl($topicId);
+                    if ($topicUrl !== null) {
+                        return $topicUrl . '#p' . $route->id;
+                    }
+                }
+                return null;
         }
 
         return null;

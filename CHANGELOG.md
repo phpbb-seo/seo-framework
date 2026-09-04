@@ -5,6 +5,32 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-09-05
+
+### Added
+- **Legacy Ultimate SEO URL (USU) Migration & Compatibility**:
+  - Full backward-compatibility resolver (`UsuMigrationResolver`) for legacy Ultimate SEO URL patterns:
+    - Topics (`{slug}-t{id}.html`, `t{id}.html`, `.htm`, extensionless, underscore delimiters, nested subfolders, pagination `-s{start}`).
+    - Forums (`{slug}-f{id}.html`, `f{id}.html`, `.htm`, extensionless, underscore delimiters, pagination `-s{start}`).
+    - Members (`member{id}.html`, `user{id}.html`, `user_{id}.html`, extensionless, `.htm`).
+    - Posts (`post{id}.html`, `post_{id}.html`, extensionless, `.htm`).
+  - Seamless 301 Permanent Redirect pipeline mapping all legacy USU formats to canonical modern SEO URLs.
+  - **Approach A Route Collision Avoidance**: Integrates directly with phpBB's Symfony Router to prevent legacy USU patterns from shadowing routes registered by the core or other extensions.
+  - **Fail-Closed Safety**: In the event of unexpected exceptions during route matching, safely aborts legacy claim to protect native routing.
+  - Configurable toggle in ACP Permalinks (`phpbbseo_legacy_usu_enabled`), defaulted to OFF (`false`) with a clear warning notice advising admins to only enable if migrating from USU.
+  - Pre-bootstrap route compiler integration in `RouteCacheCompiler` matching the active configuration.
+
+- **ACP Safe Uninstall Module**:
+  - Dedicated Safe Uninstall manager (`SafeUninstallManager`) and ACP module.
+  - Provides pre-flight diagnostics, `.htaccess` rewrite rules cleanup preview, route cache purging, and step-by-step guidance for clean, zero-downtime deactivation or removal.
+  - Comprehensive unit test coverage for safe uninstall workflows.
+
+### Improved
+- Modernized ACP administrative styling and navigation headers.
+- Route cache synchronization and lifecycle persistence.
+
+---
+
 ## [1.0.8] - 2026-08-26
 
 ### Fixed

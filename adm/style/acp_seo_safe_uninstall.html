@@ -1,0 +1,120 @@
+﻿<!-- INCLUDE @phpbbseo_framework/acp_seo_header.html -->
+
+<!-- IF S_SUCCESS -->
+	<div class="pseo-notice pseo-notice--success">
+		<span class="pseo-notice-icon">&#10003;</span>
+		<div>
+			<strong>{L_SUCCESS}</strong>
+			<p style="margin: 4px 0 0 0;">{SUCCESS_MSG}</p>
+		</div>
+	</div>
+<!-- ENDIF -->
+
+<!-- IF S_ERROR -->
+	<div class="pseo-notice pseo-notice--error">
+		<span class="pseo-notice-icon">&times;</span>
+		<div>
+			<strong>{L_WARNING}</strong>
+			<p style="margin: 4px 0 0 0;">{ERROR_MSG}</p>
+		</div>
+	</div>
+<!-- ENDIF -->
+
+<div class="pseo-card">
+	<div class="pseo-card-header">
+		<h2 class="pseo-card-title">{L_SEO_SAFE_UNINSTALL_TITLE}</h2>
+		<!-- IF S_IS_PREPARED -->
+			<span class="pseo-badge pseo-badge--success">{L_SEO_SAFE_UNINSTALL_STATUS_PREPARED}</span>
+		<!-- ELSE -->
+			<span class="pseo-badge pseo-badge--neutral">{L_SEO_SAFE_UNINSTALL_STATUS_NORMAL}</span>
+		<!-- ENDIF -->
+	</div>
+	<div class="pseo-card-body">
+		<p style="font-size: 13.5px; line-height: 1.6; margin: 0 0 16px 0;">
+			{L_SEO_SAFE_UNINSTALL_DESC}
+		</p>
+
+		<!-- System Inspection Checklist -->
+		<div style="background: var(--pseo-color-surface-subtle); border: 1px solid var(--pseo-color-border); border-radius: var(--pseo-radius-md); padding: 14px 18px; margin-bottom: 20px;">
+			<h3 style="font-size: 13px; font-weight: 600; margin: 0 0 10px 0; color: var(--pseo-color-text-main);">{L_SEO_SAFE_UNINSTALL_INSPECTION_TITLE}</h3>
+			<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+				<li style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px;">
+					<span>{L_SEO_SAFE_UNINSTALL_PRESET_CHECK}: <strong>{ACTIVE_PRESET}</strong></span>
+					<span style="color: var(--pseo-color-success); font-weight: 600;">&#10003; {L_SEO_CHECK_PASS}</span>
+				</li>
+				<li style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px;">
+					<span>{L_SEO_SAFE_UNINSTALL_REVERSIBLE_CHECK}: <strong>{REVERSIBLE_COUNT}/{TOTAL_FAMILIES} {L_SEO_FAMILIES_REVERSIBLE}</strong></span>
+					<!-- IF S_IS_REVERSIBLE -->
+						<span style="color: var(--pseo-color-success); font-weight: 600;">&#10003; {L_SEO_CHECK_PASS}</span>
+					<!-- ELSE -->
+						<span style="color: var(--pseo-color-danger); font-weight: 600;">&times; {L_SEO_CHECK_WARN}</span>
+					<!-- ENDIF -->
+				</li>
+				<li style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px;">
+					<span>{L_SEO_SAFE_UNINSTALL_HTACCESS_CHECK}: <strong><!-- IF S_HTACCESS_EXISTS -->{L_SEO_FOUND}<!-- ELSE -->{L_SEO_NOT_FOUND}<!-- ENDIF --></strong></span>
+					<!-- IF S_HTACCESS_EXISTS and S_HTACCESS_WRITABLE -->
+						<span style="color: var(--pseo-color-success); font-weight: 600;">&#10003; {L_SEO_WRITABLE}</span>
+					<!-- ELSEIF S_HTACCESS_EXISTS -->
+						<span style="color: var(--pseo-color-warning); font-weight: 600;">&#9888; {L_SEO_READONLY}</span>
+					<!-- ELSE -->
+						<span style="color: var(--pseo-color-danger); font-weight: 600;">&times; {L_SEO_NOT_FOUND}</span>
+					<!-- ENDIF -->
+				</li>
+				<li style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px;">
+					<span>{L_SEO_SAFE_UNINSTALL_BOARD_PATH}: <strong>{BOARD_BASE_PATH}</strong></span>
+					<span style="color: var(--pseo-color-success); font-weight: 600;">&#10003; {L_SEO_CHECK_PASS}</span>
+				</li>
+			</ul>
+		</div>
+
+		<!-- Action Form -->
+		<form method="post" action="{U_ACTION}">
+			{S_FORM_TOKEN}
+			<!-- IF S_IS_PREPARED -->
+				<div class="pseo-notice pseo-notice--success" style="margin-bottom: 16px;">
+					<span class="pseo-notice-icon">&#10003;</span>
+					<div>
+						<strong>{L_SEO_SAFE_UNINSTALL_READY_HEAD}</strong>
+						<p style="margin: 4px 0 0 0;">{L_SEO_SAFE_UNINSTALL_READY_BODY}</p>
+					</div>
+				</div>
+				<button type="submit" name="action_restore" value="1" class="pseo-btn pseo-btn--secondary">
+					{L_SEO_BTN_RESTORE_LITE}
+				</button>
+			<!-- ELSE -->
+				<div style="display: flex; align-items: center; gap: 12px;">
+					<!-- IF S_HTACCESS_WRITABLE -->
+						<button type="submit" name="action_prepare" value="1" class="pseo-btn pseo-btn--primary">
+							{L_SEO_BTN_PREPARE_SAFE_UNINSTALL}
+						</button>
+					<!-- ELSE -->
+						<button type="button" disabled class="pseo-btn pseo-btn--secondary" title="{L_SEO_HTACCESS_NOT_WRITABLE_TOOLTIP}">
+							{L_SEO_BTN_PREPARE_SAFE_UNINSTALL} ({L_SEO_READONLY})
+						</button>
+					<!-- ENDIF -->
+				</div>
+			<!-- ENDIF -->
+		</form>
+	</div>
+</div>
+
+<!-- Fallback Rewrite Rules Reference Card -->
+<div class="pseo-card" style="margin-top: 20px;">
+	<div class="pseo-card-header">
+		<h2 class="pseo-card-title">{L_SEO_SAFE_UNINSTALL_RULES_HEADER}</h2>
+		<span class="pseo-badge pseo-badge--neutral">Apache / LiteSpeed / Nginx</span>
+	</div>
+	<div class="pseo-card-body">
+		<p style="font-size: 12.5px; color: var(--pseo-color-text-muted); margin: 0 0 12px 0;">
+			{L_SEO_SAFE_UNINSTALL_RULES_EXPLAIN}
+		</p>
+
+		<label class="pseo-label" style="margin-top: 10px;"><strong>Apache / LiteSpeed (.htaccess):</strong></label>
+		<pre style="background: var(--pseo-color-surface-subtle); border: 1px solid var(--pseo-color-border); border-radius: var(--pseo-radius-md); padding: 12px 16px; font-family: var(--pseo-font-mono); font-size: 11.5px; overflow-x: auto; max-height: 250px; line-height: 1.45; color: var(--pseo-color-text-main); margin: 6px 0 16px 0;">{HTACCESS_RULES}</pre>
+
+		<label class="pseo-label" style="margin-top: 10px;"><strong>Nginx:</strong></label>
+		<pre style="background: var(--pseo-color-surface-subtle); border: 1px solid var(--pseo-color-border); border-radius: var(--pseo-radius-md); padding: 12px 16px; font-family: var(--pseo-font-mono); font-size: 11.5px; overflow-x: auto; max-height: 250px; line-height: 1.45; color: var(--pseo-color-text-main); margin: 6px 0 0 0;">{NGINX_RULES}</pre>
+	</div>
+</div>
+
+<!-- INCLUDE @phpbbseo_framework/acp_seo_footer.html -->

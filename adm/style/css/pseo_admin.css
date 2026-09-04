@@ -181,15 +181,39 @@
 	font-weight: 600;
 }
 
-.pseo-nav-item.is-disabled a {
-	color: var(--pseo-color-text-subtle);
-	cursor: default;
-	opacity: 0.75;
+.pseo-nav-item.is-disabled {
+	cursor: not-allowed;
 }
 
-.pseo-nav-item.is-disabled a:hover {
-	background: transparent;
-	color: var(--pseo-color-text-subtle);
+.pseo-nav-item.is-disabled a,
+.pseo-nav-item.is-disabled .pseo-nav-disabled-link {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 7px 10px;
+	border-radius: var(--pseo-radius-md);
+	color: #94a3b8 !important;
+	text-decoration: none !important;
+	font-size: 12.5px;
+	font-weight: 500;
+	cursor: not-allowed !important;
+	pointer-events: none !important;
+	user-select: none;
+	background: transparent !important;
+	opacity: 0.55;
+}
+
+.pseo-nav-item.is-disabled a:hover,
+.pseo-nav-item.is-disabled .pseo-nav-disabled-link:hover {
+	background: transparent !important;
+	color: #94a3b8 !important;
+}
+
+.pseo-nav-item.is-disabled .pseo-badge--pro {
+	background: #f1f5f9 !important;
+	color: #94a3b8 !important;
+	border: 1px solid #cbd5e1 !important;
+	box-shadow: none !important;
 }
 
 /* Badges */

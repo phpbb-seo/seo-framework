@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace phpbbseo\framework\Rewrite;
 
+use phpbbseo\framework\Migration\UsuMigrationResolver;
+
 /**
  * Resolves inbound pretty-URL paths to Framework route results.
  * Matched by ID only — slug is descriptive, not identity.
@@ -10,7 +12,8 @@ namespace phpbbseo\framework\Rewrite;
 class InboundRouteResolver
 {
     public function __construct(
-        private readonly PermalinkRewriteProfile $profile
+        private readonly PermalinkRewriteProfile $profile,
+        private readonly ?UsuMigrationResolver $usuResolver = null
     ) {}
 
     public function resolve(string $path): ?InboundRouteResult
@@ -67,6 +70,14 @@ class InboundRouteResolver
                 slug:     $match['slug'],
                 page:     null
             );
+        }
+
+        // Try legacy USU migration
+        if ($this->usuResolver !== null) {
+            $usuMatch = $this->usuResolver->resolve($path);
+            if ($usuMatch !== null) {
+                return $usuMatch;
+            }
         }
 
         return null;

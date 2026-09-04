@@ -31,6 +31,9 @@ $lang = array_merge($lang, [
     'SEO_NAV_SCHEMA'            => 'Schema & Rich Data',
     'SEO_NAV_REDIRECTS'         => 'Redirect Manager',
     'SEO_NAV_ANALYZER'          => 'SEO Analyzer',
+    'SEO_NAV_ROBOTS'            => 'Robots & Indexing',
+    'SEO_NAV_INDEXNOW'          => 'IndexNow Protocol',
+    'SEO_PRO_DISABLED_NOTICE'   => 'phpBB SEO Pro extension is disabled. Enable it in Customise > Manage extensions to access this feature.',
 
     // Dashboard View
     'SEO_DASHBOARD_TITLE'            => 'SEO Framework Dashboard',
@@ -121,5 +124,40 @@ $lang = array_merge($lang, [
     'SEO_VIEW_RELEASE'             => 'View Release',
     'SEO_DOWNLOAD_UPDATE'          => 'Download Update',
     'SEO_UPDATES_CHECKED_SUCCESS'  => 'Update check completed successfully.',
+
+    // Safe Uninstall
+    'SEO_NAV_SAFE_UNINSTALL'               => 'Safe Uninstall',
+    'ACP_PHPBBSEO_SAFE_UNINSTALL'          => 'Safe Uninstall',
+    'SEO_SAFE_UNINSTALL_TITLE'             => 'Safe Uninstall Protection',
+    'SEO_SAFE_UNINSTALL_STATUS_PREPARED'   => 'Protected & Ready for Uninstall',
+    'SEO_SAFE_UNINSTALL_STATUS_NORMAL'     => 'Normal Lite Routing Active',
+    'SEO_SAFE_UNINSTALL_DESC'              => 'Safe Uninstall prepares standalone web server rewrite rules that permanently 301-redirect all existing SEO URLs to native phpBB scripts (viewtopic.php, viewforum.php). This ensures search engines and inbound links never break even if the extension is disabled or physically deleted from your server.',
+    'SEO_SAFE_UNINSTALL_INSPECTION_TITLE'  => 'Pre-Flight System Inspection',
+    'SEO_SAFE_UNINSTALL_PRESET_CHECK'      => 'Active Permalink Preset',
+    'SEO_SAFE_UNINSTALL_REVERSIBLE_CHECK'  => 'URL Reversibility',
+    'SEO_CHECK_PASS'                       => 'PASS',
+    'SEO_CHECK_WARN'                       => 'WARNING',
+    'SEO_FAMILIES_REVERSIBLE'              => 'families reversible',
+    'SEO_SAFE_UNINSTALL_HTACCESS_CHECK'    => 'Root .htaccess File',
+    'SEO_FOUND'                            => 'Found',
+    'SEO_NOT_FOUND'                        => 'Not Found',
+    'SEO_WRITABLE'                         => 'Writable',
+    'SEO_READONLY'                         => 'Read-Only',
+    'SEO_SAFE_UNINSTALL_BOARD_PATH'        => 'Board Rewrite Base',
+    'SEO_SAFE_UNINSTALL_READY_HEAD'        => 'Safe Uninstall is Prepared',
+    'SEO_SAFE_UNINSTALL_READY_BODY'        => 'Standalone HTTP 301 fallback rules are active in your .htaccess file. You may now safely disable and remove the extension in Manage Extensions.',
+    'SEO_BTN_PREPARE_SAFE_UNINSTALL'       => 'Prepare Safe Uninstall',
+    'SEO_BTN_RESTORE_LITE'                 => 'Revert to Normal Lite Routing',
+    'SEO_SAFE_UNINSTALL_PREPARED_SUCCESS'  => 'Safe Uninstall rules have been successfully injected into .htaccess. All SEO URLs are now protected with standalone 301 redirects.',
+    'SEO_SAFE_UNINSTALL_RESTORED_SUCCESS'  => 'Normal Lite routing has been restored. Fallback rules have been removed from .htaccess.',
+    'SEO_SAFE_UNINSTALL_RULES_HEADER'      => 'Standalone Fallback Rules Preview',
+    'SEO_SAFE_UNINSTALL_RULES_EXPLAIN'     => 'These rewrite rules are independent of the extension and will continue redirecting your indexed SEO URLs to native phpBB even after the extension files are deleted.',
+    'SEO_HTACCESS_NOT_WRITABLE_TOOLTIP'    => 'The root .htaccess file is not writable by PHP. Please copy and paste the rules below manually.',
+
+    // Legacy Migration (USU Compatibility)
+    'SEO_LEGACY_MIGRATION_TITLE'       => 'Legacy Migration Compatibility (USU / phpBB SEO)',
+    'SEO_LEGACY_USU_ENABLE'            => 'Enable Ultimate SEO URLs (USU) 301 Redirects',
+    'SEO_LEGACY_USU_ENABLE_EXPLAIN'    => 'Automatically detects legacy Ultimate SEO URL (USU) links (*-t{id}.html, *-f{id}.html, member{id}.html, post{id}.html) and issues single-hop HTTP 301 permanent redirects to active Lite canonical URLs. Requires zero database mapping and zero legacy USU files.',
+    'SEO_LEGACY_USU_WARNING'           => 'Only enable this if this site previously used Ultimate SEO URLs (USU). If this site never used USU, leave this OFF — enabling it unnecessarily will cause the board to 301-redirect unrelated URLs that happen to match legacy patterns (e.g. anything ending in -f{number} or -t{number}), which is not appropriate for a site without USU history.',
 ]);
 

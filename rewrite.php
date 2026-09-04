@@ -37,6 +37,7 @@ $targetScripts = [
     'forum'  => 'viewforum.php',
     'member' => 'memberlist.php',
     'group'  => 'memberlist.php',
+    'post'   => 'viewtopic.php',
 ];
 
 $routes = null;
@@ -170,6 +171,18 @@ if (is_array($routes) && !empty($routes)) {
                         $_REQUEST['mode'] = 'group';
                         $_REQUEST['g'] = (string) $id;
                         break;
+
+                    case 'post':
+                        $_GET['p'] = (string) $id;
+                        $_REQUEST['p'] = (string) $id;
+                        break;
+                }
+
+                // Support start offset (e.g. from legacy USU -t123-20.html)
+                if (isset($matches['start']) && (int) $matches['start'] > 0) {
+                    $startOffset = (int) $matches['start'];
+                    $_GET['start'] = (string) $startOffset;
+                    $_REQUEST['start'] = (string) $startOffset;
                 }
 
                 // Dynamically pass page number without hardcoding pagination offsets

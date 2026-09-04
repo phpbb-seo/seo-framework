@@ -34,6 +34,11 @@ class main_info
                     'auth'  => 'ext_phpbbseo/framework && acl_a_board',
                     'cat'   => ['ACP_PHPBBSEO_TITLE'],
                 ],
+                'safe_uninstall' => [
+                    'title' => 'ACP_PHPBBSEO_SAFE_UNINSTALL',
+                    'auth'  => 'ext_phpbbseo/framework && acl_a_board',
+                    'cat'   => ['ACP_PHPBBSEO_TITLE'],
+                ],
             ],
         ];
     }

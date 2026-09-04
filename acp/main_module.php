@@ -40,27 +40,35 @@ class main_module
         $cleanActionNoModule = preg_replace('/&amp;i=[^&]+/i', '', $cleanAction);
         $cleanActionNoModule = preg_replace('/&i=[^&]+/i', '', $cleanActionNoModule);
 
+        /** @var \phpbb\extension\manager $extManager */
+        $extManager = $phpbb_container->get('ext.manager');
+        $isProEnabled = $extManager->is_enabled('phpbbseo/pro');
+
         $template->assign_vars([
             'PSEO_ACTIVE_MODE'         => $mode,
             'PSEO_BASE_URL'            => $boardUrl,
             'PSEO_VERSION'             => Version::getVersion(),
-            'PSEO_EDITION'             => Version::getEdition(),
+            'PSEO_EDITION'             => $isProEnabled ? 'Pro' : 'Lite',
             'PSEO_ASSET_VERSION'       => Version::getVersion() . '.' . time(),
-            'PSEO_FULL_VERSION'        => Version::getFullVersionString(),
-            'U_ACTION_DASHBOARD'       => $this->u_action . '&amp;mode=dashboard',
-            'U_ACTION_PERMALINKS'      => $this->u_action . '&amp;mode=permalinks',
-            'U_ACTION_TITLES_META'     => $this->u_action . '&amp;mode=titles_meta',
-            'U_ACTION_SITEMAP'         => $this->u_action . '&amp;mode=sitemap',
+            'PSEO_FULL_VERSION'        => 'v' . Version::getVersion() . ' • ' . ($isProEnabled ? 'Pro' : 'Lite') . ' Edition',
+            'U_ACTION_DASHBOARD'       => $cleanAction . '&amp;mode=dashboard',
+            'U_ACTION_PERMALINKS'      => $cleanAction . '&amp;mode=permalinks',
+            'U_ACTION_TITLES_META'     => $cleanAction . '&amp;mode=titles_meta',
+            'U_ACTION_SITEMAP'         => $cleanAction . '&amp;mode=sitemap',
+            'U_ACTION_SAFE_UNINSTALL'  => $cleanAction . '&amp;mode=safe_uninstall',
             'U_ACTION_PRO_OVERVIEW'    => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=overview',
             'U_ACTION_PRO_ANALYZER'    => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=analyzer',
             'U_ACTION_PRO_TITLES_META' => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=titles_meta',
+            'U_ACTION_PRO_SOCIAL'      => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=social',
             'U_ACTION_PRO_SCHEMA'      => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=schema',
             'U_ACTION_PRO_GSC'         => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=gsc',
             'U_ACTION_PRO_MONITOR_404' => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=monitor_404',
             'U_ACTION_PRO_REDIRECTS'   => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=redirects',
             'U_ACTION_PRO_ROBOTS'      => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=robots',
+            'U_ACTION_PRO_INDEXNOW'    => $cleanActionNoModule . '&amp;i=\\phpbbseo\\pro\\acp\\pro_module&amp;mode=indexnow',
             'S_SEO_ENABLED'            => $configProvider->isEnabled(),
             'S_REWRITE_ENABLED'        => $configProvider->isRewriteEnabled(),
+            'S_PRO_ENABLED'            => $isProEnabled,
         ]);
 
         switch ($mode) {
@@ -78,6 +86,10 @@ class main_module
 
             case 'sitemap':
                 $this->handleSitemap($phpbb_container, $user, $template, $request, $config);
+                break;
+
+            case 'safe_uninstall':
+                $this->handleSafeUninstall($phpbb_container, $user, $template, $request, $config);
                 break;
 
             default:
@@ -149,6 +161,7 @@ class main_module
                 $patternTopic  = '/' . ltrim($patternTopic, '/');
                 $patternMember = '/' . ltrim($patternMember, '/');
                 $patternGroup  = '/' . ltrim($patternGroup, '/');
+                $legacyUsu     = $request->variable('legacy_usu_enabled', 0) ? 1 : 0;
 
                 // Derive pagination patterns consistently
                 $patternForumPage = rtrim($patternForum, '/') . '/page-{page}/';
@@ -176,17 +189,18 @@ class main_module
 
                     // Snapshot old config values for complete rollback safety
                     $oldConfigValues = [
-                        'seo_permalink_preset'    => (string) ($config['seo_permalink_preset'] ?? 'modern'),
-                        'seo_pattern_forum'       => (string) ($config['seo_pattern_forum'] ?? '/forum/{slug}-{id}/'),
-                        'seo_pattern_forum_page'  => (string) ($config['seo_pattern_forum_page'] ?? '/forum/{slug}-{id}/page-{page}/'),
-                        'seo_pattern_topic'       => (string) ($config['seo_pattern_topic'] ?? '/topic/{slug}-{id}/'),
-                        'seo_pattern_topic_page'  => (string) ($config['seo_pattern_topic_page'] ?? '/topic/{slug}-{id}/page-{page}/'),
-                        'seo_pattern_member'      => (string) ($config['seo_pattern_member'] ?? '/member/{slug}-{id}/'),
-                        'seo_pattern_group'       => (string) ($config['seo_pattern_group'] ?? '/group/{slug}-{id}/'),
-                        'seo_prev_pattern_forum'  => (string) ($config['seo_prev_pattern_forum'] ?? '/forum/{slug}-{id}/'),
-                        'seo_prev_pattern_topic'  => (string) ($config['seo_prev_pattern_topic'] ?? '/topic/{slug}-{id}/'),
-                        'seo_prev_pattern_member' => (string) ($config['seo_prev_pattern_member'] ?? '/member/{slug}-{id}/'),
-                        'seo_prev_pattern_group'  => (string) ($config['seo_prev_pattern_group'] ?? '/group/{slug}-{id}/'),
+                        'seo_permalink_preset'        => (string) ($config['seo_permalink_preset'] ?? 'modern'),
+                        'phpbbseo_legacy_usu_enabled' => (string) ($config['phpbbseo_legacy_usu_enabled'] ?? '0'),
+                        'seo_pattern_forum'           => (string) ($config['seo_pattern_forum'] ?? '/forum/{slug}-{id}/'),
+                        'seo_pattern_forum_page'      => (string) ($config['seo_pattern_forum_page'] ?? '/forum/{slug}-{id}/page-{page}/'),
+                        'seo_pattern_topic'           => (string) ($config['seo_pattern_topic'] ?? '/topic/{slug}-{id}/'),
+                        'seo_pattern_topic_page'      => (string) ($config['seo_pattern_topic_page'] ?? '/topic/{slug}-{id}/page-{page}/'),
+                        'seo_pattern_member'          => (string) ($config['seo_pattern_member'] ?? '/member/{slug}-{id}/'),
+                        'seo_pattern_group'           => (string) ($config['seo_pattern_group'] ?? '/group/{slug}-{id}/'),
+                        'seo_prev_pattern_forum'      => (string) ($config['seo_prev_pattern_forum'] ?? '/forum/{slug}-{id}/'),
+                        'seo_prev_pattern_topic'      => (string) ($config['seo_prev_pattern_topic'] ?? '/topic/{slug}-{id}/'),
+                        'seo_prev_pattern_member'     => (string) ($config['seo_prev_pattern_member'] ?? '/member/{slug}-{id}/'),
+                        'seo_prev_pattern_group'      => (string) ($config['seo_prev_pattern_group'] ?? '/group/{slug}-{id}/'),
                     ];
 
                     $prevPatterns = [
@@ -203,7 +217,7 @@ class main_module
 
                     try {
                         // 1. Stage & compile new routes to verified artifact, atomically replace compiled_routes.php
-                        $routeCompiler->compileAndDump($submittedPatterns, $prevPatterns);
+                        $routeCompiler->compileAndDump($submittedPatterns, $prevPatterns, (bool) $legacyUsu);
 
                         // 2. Persist previously active patterns and new configuration to phpBB DB
                         foreach ($prevPatterns as $res => $prevVal) {
@@ -211,6 +225,7 @@ class main_module
                         }
 
                         $config->set('seo_permalink_preset', 'custom');
+                        $config->set('phpbbseo_legacy_usu_enabled', (string) $legacyUsu);
                         $config->set('seo_pattern_forum', $patternForum);
                         $config->set('seo_pattern_forum_page', $patternForumPage);
                         $config->set('seo_pattern_topic', $patternTopic);
@@ -255,12 +270,13 @@ class main_module
             'PATTERN_MEMBER'  => $curMember,
             'PATTERN_GROUP'   => $curGroup,
             'PREVIEW_FORUM'   => $previewForum,
-            'PREVIEW_TOPIC'   => $previewTopic,
-            'PREVIEW_MEMBER'  => $previewMember,
-            'PREVIEW_GROUP'   => $previewGroup,
-            'S_ERROR'         => !empty($errors),
-            'ERROR_MSG'       => implode('<br>', $errors),
-            'U_ACTION'        => $this->u_action,
+            'PREVIEW_TOPIC'        => $previewTopic,
+            'PREVIEW_MEMBER'       => $previewMember,
+            'PREVIEW_GROUP'        => $previewGroup,
+            'S_LEGACY_USU_ENABLED' => (bool) ($config['phpbbseo_legacy_usu_enabled'] ?? false),
+            'S_ERROR'              => !empty($errors),
+            'ERROR_MSG'            => implode('<br>', $errors),
+            'U_ACTION'             => $this->u_action,
         ]);
     }
 
@@ -444,6 +460,64 @@ class main_module
         ]);
 
         add_form_key('pseo_sitemap_form');
+    }
+
+    private function handleSafeUninstall($container, $user, $template, $request, $config): void
+    {
+        $this->tpl_name = '@phpbbseo_framework/acp_seo_safe_uninstall';
+        $this->page_title = $user->lang('ACP_PHPBBSEO_SAFE_UNINSTALL');
+
+        /** @var \phpbbseo\framework\SafeUninstall\SafeUninstallManager $safeUninstall */
+        $safeUninstall = $container->get('phpbbseo.framework.safe_uninstall.manager');
+
+        $successMsg = '';
+        $errorMsg = '';
+
+        if ($request->is_set_post('action_prepare')) {
+            if (!check_form_key('acp_seo_safe_uninstall')) {
+                $errorMsg = $user->lang('FORM_INVALID');
+            } else {
+                try {
+                    $safeUninstall->prepare();
+                    $successMsg = $user->lang('SEO_SAFE_UNINSTALL_PREPARED_SUCCESS');
+                } catch (\Throwable $e) {
+                    $errorMsg = $e->getMessage();
+                }
+            }
+        } elseif ($request->is_set_post('action_restore')) {
+            if (!check_form_key('acp_seo_safe_uninstall')) {
+                $errorMsg = $user->lang('FORM_INVALID');
+            } else {
+                try {
+                    $safeUninstall->restore();
+                    $successMsg = $user->lang('SEO_SAFE_UNINSTALL_RESTORED_SUCCESS');
+                } catch (\Throwable $e) {
+                    $errorMsg = $e->getMessage();
+                }
+            }
+        }
+
+        $analysis = $safeUninstall->analyze();
+
+        $template->assign_vars([
+            'ACTIVE_PRESET'        => $analysis['active_preset'],
+            'S_IS_REVERSIBLE'      => $analysis['is_reversible'],
+            'REVERSIBLE_COUNT'     => $analysis['reversible_count'],
+            'TOTAL_FAMILIES'       => $analysis['total_families'],
+            'BOARD_BASE_PATH'      => $analysis['board_base_path'],
+            'S_HTACCESS_EXISTS'    => $analysis['htaccess_exists'],
+            'S_HTACCESS_WRITABLE'  => $analysis['htaccess_writable'],
+            'S_IS_PREPARED'        => $analysis['is_prepared'],
+            'HTACCESS_RULES'       => htmlspecialchars($safeUninstall->generateHtaccessRules()),
+            'NGINX_RULES'          => htmlspecialchars($safeUninstall->generateNginxRules()),
+            'S_SUCCESS'            => !empty($successMsg),
+            'SUCCESS_MSG'          => $successMsg,
+            'S_ERROR'              => !empty($errorMsg),
+            'ERROR_MSG'            => $errorMsg,
+            'U_ACTION'             => $this->u_action,
+        ]);
+
+        add_form_key('acp_seo_safe_uninstall');
     }
 
     private function generatePreview(UrlPatternCompiler $compiler, string $pattern, string $slug, int $id): string

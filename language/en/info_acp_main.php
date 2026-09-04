@@ -16,4 +16,5 @@ $lang = array_merge($lang, [
     'ACP_PHPBBSEO_PERMALINKS'  => 'Permalinks',
     'ACP_PHPBBSEO_TITLES_META' => 'Titles & Meta',
     'ACP_PHPBBSEO_SITEMAP'     => 'XML Sitemap',
+    'ACP_PHPBBSEO_SAFE_UNINSTALL' => 'Safe Uninstall',
 ]);

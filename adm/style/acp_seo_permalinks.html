@@ -125,6 +125,27 @@
 				</div>
 			</div>
 		</div>
+	<!-- Legacy Migration Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_LEGACY_MIGRATION_TITLE}</h2>
+			<span class="pseo-badge pseo-badge--neutral">USU / Legacy</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-notice pseo-notice--warning" style="margin-bottom: 14px;">
+				<span class="pseo-notice-icon">⚠️</span>
+				<span>{L_SEO_LEGACY_USU_WARNING}</span>
+			</div>
+			<div class="pseo-field">
+				<label class="pseo-label" for="legacy_usu_enabled">
+					<span>{L_SEO_LEGACY_USU_ENABLE}</span>
+				</label>
+				<label style="display: flex; align-items: flex-start; gap: 8px; font-weight: 500; cursor: pointer;">
+					<input type="checkbox" id="legacy_usu_enabled" name="legacy_usu_enabled" value="1" style="margin-top: 3px;"<!-- IF S_LEGACY_USU_ENABLED --> checked="checked"<!-- ENDIF --> />
+					<span style="font-size: 13px; color: #475569; line-height: 1.4;">{L_SEO_LEGACY_USU_ENABLE_EXPLAIN}</span>
+				</label>
+			</div>
+		</div>
 	</div>
 
 	<!-- Sticky Save Changes Action Bar -->

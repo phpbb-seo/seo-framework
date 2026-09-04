@@ -55,6 +55,27 @@ class ext extends \phpbb\extension\base
                     // Safe core defaults are already written above
                 }
 
+                // If Safe Uninstall rules were previously active, restore normal Lite routing
+                try {
+                    require_once $this->extension_path . 'SafeUninstall/SafeUninstallManager.php';
+                    $safeUninstall = null;
+                    if ($container->has('phpbbseo.framework.safe_uninstall.manager')) {
+                        $safeUninstall = $container->get('phpbbseo.framework.safe_uninstall.manager');
+                    } else {
+                        $safeUninstall = new \phpbbseo\framework\SafeUninstall\SafeUninstallManager(
+                            $this->container->getParameter('core.root_path'),
+                            null,
+                            $config,
+                            $container->has('cache.driver') ? $container->get('cache.driver') : null
+                        );
+                    }
+                    if ($safeUninstall !== null && $safeUninstall->isPrepared() && $safeUninstall->isHtaccessWritable()) {
+                        $safeUninstall->restore();
+                    }
+                } catch (\Throwable) {
+                    // Fail-safe
+                }
+
                 return 'all';
 
             default:
@@ -77,6 +98,27 @@ class ext extends \phpbb\extension\base
                 }
                 $cacheFile = $storeDir . 'compiled_routes.php';
                 @file_put_contents($cacheFile, "<?php\n// Disabled extension route cache marker.\ndeclare(strict_types=1);\n\nreturn ['__disabled' => true];\n");
+
+                // Prepare Safe Uninstall fallback rules in .htaccess so SEO URLs 301-redirect to native phpBB
+                try {
+                    require_once $this->extension_path . 'SafeUninstall/SafeUninstallManager.php';
+                    $safeUninstall = null;
+                    if ($container->has('phpbbseo.framework.safe_uninstall.manager')) {
+                        $safeUninstall = $container->get('phpbbseo.framework.safe_uninstall.manager');
+                    } else {
+                        $safeUninstall = new \phpbbseo\framework\SafeUninstall\SafeUninstallManager(
+                            $this->container->getParameter('core.root_path'),
+                            null,
+                            $config,
+                            $container->has('cache.driver') ? $container->get('cache.driver') : null
+                        );
+                    }
+                    if ($safeUninstall !== null && !$safeUninstall->isPrepared() && $safeUninstall->isHtaccessWritable()) {
+                        $safeUninstall->prepare();
+                    }
+                } catch (\Throwable) {
+                    // Fail-safe
+                }
 
                 return 'all';
 
