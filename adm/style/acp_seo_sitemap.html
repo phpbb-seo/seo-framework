@@ -65,9 +65,48 @@
 				</div>
 				<div class="pseo-stat-item" style="background: var(--pseo-color-surface-subtle); padding: 12px; border-radius: 6px; border: 1px solid var(--pseo-color-border-subtle);">
 					<span class="pseo-stat-label" style="display: block; font-size: 12px; color: var(--pseo-color-text-muted);">{L_SEO_STAT_MISSING_SLUGS}</span>
-					<strong class="pseo-stat-value" style="display: block; font-size: 20px; color: <!-- IF STAT_MISSING != '0' -->var(--pseo-color-warning)<!-- ELSE -->var(--pseo-color-success)<!-- ENDIF -->; margin-top: 4px;">{STAT_MISSING}</strong>
+					<strong id="pseo_stat_missing_val" class="pseo-stat-value" style="display: block; font-size: 20px; color: <!-- IF STAT_MISSING != '0' -->var(--pseo-color-warning)<!-- ELSE -->var(--pseo-color-success)<!-- ENDIF -->; margin-top: 4px;">{STAT_MISSING}</strong>
 				</div>
 			</div>
+
+			<!-- IF S_HAS_MISSING_SLUGS -->
+			<div id="pseo_rebuild_box" style="margin-top: 16px; padding: 14px 16px; background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
+				<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+					<div style="flex: 1; min-width: 260px;">
+						<div style="font-weight: 600; font-size: 14px; color: var(--pseo-color-text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+							<span style="color: var(--pseo-color-warning);">&#9888;</span>
+							<span><strong id="pseo_notice_missing_count">{STAT_MISSING}</strong> {L_SEO_MISSING_NOTICE_TITLE}</span>
+						</div>
+						<div style="font-size: 12px; color: var(--pseo-color-text-muted); line-height: 1.5;">
+							{L_SEO_MISSING_NOTICE_DESC}
+						</div>
+					</div>
+					<div>
+						<button type="button" id="pseo_btn_rebuild" class="pseo-btn pseo-btn--primary" style="white-space: nowrap;">
+							{L_SEO_REBUILD_MISSING_SLUGS}
+						</button>
+					</div>
+				</div>
+
+				<!-- Stepped Progress Bar Container -->
+				<div id="pseo_progress_wrap" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.06);">
+					<div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 6px;">
+						<span id="pseo_progress_label" style="font-weight: 600; color: var(--pseo-color-text-main);">{L_SEO_REBUILDING_SLUGS}</span>
+						<span id="pseo_progress_pct" style="font-weight: 700; font-family: var(--pseo-font-mono, monospace);">0%</span>
+					</div>
+					<div style="width: 100%; height: 10px; background: var(--pseo-color-border-subtle, #e2e8f0); border-radius: 5px; overflow: hidden;">
+						<div id="pseo_progress_bar" style="width: 0%; height: 100%; background: #2563eb; transition: width 0.25s ease;"></div>
+					</div>
+					<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--pseo-color-text-muted); margin-top: 6px;">
+						<span id="pseo_progress_counts">0 / {STAT_MISSING} {L_SEO_TOPICS_PROCESSED}</span>
+						<span id="pseo_progress_status_text"></span>
+					</div>
+				</div>
+
+				<!-- Message container for Success/Paused/Errors -->
+				<div id="pseo_rebuild_alert" style="display: none; margin-top: 12px; padding: 8px 12px; border-radius: 6px; font-size: 13px;"></div>
+			</div>
+			<!-- ENDIF -->
 		</div>
 	</div>
 
@@ -112,4 +151,138 @@
 	{S_FORM_TOKEN}
 </form>
 
+<div id="pseo_rebuild_tokens" style="display: none;">
+	{S_FORM_TOKEN_REBUILD}
+</div>
+
+<script>
+(function() {
+	var btnRebuild = document.getElementById('pseo_btn_rebuild');
+	if (!btnRebuild) return;
+
+	var progressWrap = document.getElementById('pseo_progress_wrap');
+	var progressBar = document.getElementById('pseo_progress_bar');
+	var progressPct = document.getElementById('pseo_progress_pct');
+	var progressCounts = document.getElementById('pseo_progress_counts');
+	var progressStatus = document.getElementById('pseo_progress_status_text');
+	var rebuildAlert = document.getElementById('pseo_rebuild_alert');
+	var statMissingVal = document.getElementById('pseo_stat_missing_val');
+	var noticeMissingCount = document.getElementById('pseo_notice_missing_count');
+
+	var initialMissing = {NUM_MISSING_RAW};
+	var totalProcessed = 0;
+	var lastId = 0;
+	var isRunning = false;
+	var batchSize = 500;
+	var endpoint = '{U_BACKFILL_ENDPOINT}'.replace(/&amp;/g, '&');
+	var fallbackEndpoint = '{U_BACKFILL_ACTION}'.replace(/&amp;/g, '&');
+
+	function getTokens() {
+		var wrap = document.getElementById('pseo_rebuild_tokens');
+		var formToken = wrap ? (wrap.querySelector('input[name="form_token"]') || {}).value : '';
+		var creationTime = wrap ? (wrap.querySelector('input[name="creation_time"]') || {}).value : '';
+		return { form_token: formToken || '', creation_time: creationTime || '' };
+	}
+
+	function showAlert(msg, isError, isSuccess) {
+		rebuildAlert.style.display = 'block';
+		rebuildAlert.innerHTML = msg;
+		if (isError) {
+			rebuildAlert.style.background = '#fee2e2';
+			rebuildAlert.style.color = '#991b1b';
+			rebuildAlert.style.border = '1px solid #f87171';
+		} else if (isSuccess) {
+			rebuildAlert.style.background = '#dcfce7';
+			rebuildAlert.style.color = '#166534';
+			rebuildAlert.style.border = '1px solid #86efac';
+		} else {
+			rebuildAlert.style.background = '#fef9c3';
+			rebuildAlert.style.color = '#854d0e';
+			rebuildAlert.style.border = '1px solid #fde047';
+		}
+	}
+
+	function updateProgress(processedInBatch, remaining) {
+		totalProcessed += processedInBatch;
+		var pct = initialMissing > 0 ? Math.min(100, Math.round((totalProcessed / initialMissing) * 100)) : 100;
+		progressBar.style.width = pct + '%';
+		progressPct.textContent = pct + '%';
+		progressCounts.textContent = totalProcessed + ' / ' + Math.max(initialMissing, totalProcessed) + ' {L_SEO_TOPICS_PROCESSED}';
+	}
+
+	function sendStep(cursorId, useFallback) {
+		var url = useFallback ? fallbackEndpoint : endpoint;
+		var tokens = getTokens();
+		var formData = new FormData();
+		formData.append('last_id', cursorId);
+		formData.append('batch_size', batchSize);
+		formData.append('form_token', tokens.form_token);
+		formData.append('creation_time', tokens.creation_time);
+		if (useFallback) {
+			formData.append('action_backfill_step', '1');
+		}
+
+		progressStatus.textContent = 'Processing...';
+
+		fetch(url, {
+			method: 'POST',
+			body: formData,
+			headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		})
+		.then(function(res) {
+			if (!res.ok) {
+				if (!useFallback && (res.status === 404 || res.status === 405)) {
+					return sendStep(cursorId, true);
+				}
+				return res.json().then(function(errData) {
+					throw new Error(errData.error || ('HTTP Error ' + res.status));
+				}).catch(function(e) {
+					throw new Error(e.message || ('HTTP Error ' + res.status));
+				});
+			}
+			return res.json();
+		})
+		.then(function(data) {
+			if (!data || !data.success) {
+				throw new Error((data && data.error) ? data.error : 'Invalid response from server.');
+			}
+
+			lastId = data.last_id;
+			updateProgress(data.processed, data.remaining);
+
+			if (data.completed || data.remaining === 0) {
+				isRunning = false;
+				progressBar.style.width = '100%';
+				progressPct.textContent = '100%';
+				btnRebuild.style.display = 'none';
+				if (statMissingVal) statMissingVal.textContent = '0';
+				if (noticeMissingCount) noticeMissingCount.textContent = '0';
+				showAlert('&#10004; {L_SEO_REBUILD_COMPLETE}', false, true);
+			} else {
+				sendStep(lastId, useFallback);
+			}
+		})
+		.catch(function(err) {
+			isRunning = false;
+			btnRebuild.disabled = false;
+			btnRebuild.textContent = '{L_SEO_RESUME_REBUILD}';
+			progressStatus.textContent = 'Paused';
+			showAlert('&#9888; {L_SEO_REBUILD_PAUSED}<br><small style="opacity: 0.85;">' + (err.message || err) + '</small>', true, false);
+		});
+	}
+
+	btnRebuild.addEventListener('click', function() {
+		if (isRunning) return;
+		isRunning = true;
+		btnRebuild.disabled = true;
+		btnRebuild.textContent = 'Rebuilding...';
+		progressWrap.style.display = 'block';
+		rebuildAlert.style.display = 'none';
+
+		sendStep(lastId, false);
+	});
+})();
+</script>
+
 <!-- INCLUDE @phpbbseo_framework/acp_seo_footer.html -->
+

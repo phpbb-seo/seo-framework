@@ -113,6 +113,18 @@ $lang = array_merge($lang, [
     'SEO_SITEMAP_SAVED'            => 'XML Sitemap configuration has been updated successfully.',
     'SEO_ERR_SITEMAP_CHUNK_SIZE'   => 'URLs per sitemap file must be an integer between 100 and 50,000.',
 
+    // Persistent Slug Backfill
+    'SEO_MISSING_NOTICE_TITLE'     => 'topics do not yet have persistent SEO slugs.',
+    'SEO_MISSING_NOTICE_DESC'      => 'Active topics will continue to be indexed automatically as they are visited. To index all existing topics immediately for search engines and sitemaps:',
+    'SEO_REBUILD_MISSING_SLUGS'    => 'Rebuild Missing Slugs',
+    'SEO_REBUILDING_SLUGS'         => 'Rebuilding SEO slugs...',
+    'SEO_TOPICS_PROCESSED'         => 'topics processed',
+    'SEO_REBUILD_COMPLETE'         => 'Slug rebuild completed successfully! All topics are now indexed.',
+    'SEO_REBUILD_PAUSED'           => 'Slug rebuild paused. The previous batches were completed successfully. You can resume the rebuild.',
+    'SEO_RESUME_REBUILD'           => 'Resume Rebuild',
+    'SEO_REBUILD_LOCKED'           => 'A slug rebuild process is already running in another session or CLI.',
+
+
     // Version & Updates
     'SEO_VERSION_TITLE'            => 'Version & Updates',
     'SEO_VERSION_LATEST_NOTICE'    => 'You are running the latest version of phpBB SEO Framework.',

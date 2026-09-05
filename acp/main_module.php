@@ -440,26 +440,83 @@ class main_module
             }
         }
 
+        if ($request->is_set_post('action_backfill_step')) {
+            if (!check_form_key('pseo_sitemap_rebuild')) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => $user->lang('FORM_INVALID')]);
+                exit;
+            }
+
+            /** @var \phpbbseo\framework\Backfill\SlugBackfillManager $backfillManager */
+            $backfillManager = $container->get('phpbbseo.framework.backfill.manager');
+            $lastId = max(0, (int) $request->variable('last_id', 0));
+            $batchSize = min(max((int) $request->variable('batch_size', 500), 1), 1000);
+
+            try {
+                $res = $backfillManager->backfillBatch('topic', $lastId, $batchSize, true);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success'   => true,
+                    'processed' => $res->processed,
+                    'last_id'   => $res->lastId,
+                    'remaining' => $res->remaining,
+                    'completed' => $res->completed,
+                    'elapsed'   => $res->elapsed,
+                ]);
+                exit;
+            } catch (\phpbbseo\framework\Backfill\Exception\BackfillLockException $e) {
+                http_response_code(409);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => $e->getMessage(), 'locked' => true]);
+                exit;
+            } catch (\Throwable $e) {
+                http_response_code(500);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+        }
+
         $curSitemapEnable = (string) ($config['seo_sitemap_enable'] ?? '1') === '1';
         $curUrlsPerFile   = (int) ($config['seo_sitemap_urls_per_file'] ?? 50000);
 
         $stats = $repository->getSitemapStats($curUrlsPerFile);
         $sitemapUrl = $urlGenerator->getBoardUrl() . 'sitemap.xml';
 
+        $backfillEndpoint = '';
+        if ($container->has('controller.helper')) {
+            try {
+                /** @var \phpbb\controller\helper $controllerHelper */
+                $controllerHelper = $container->get('controller.helper');
+                $backfillEndpoint = $controllerHelper->route('phpbbseo_framework_acp_backfill', [], true, $user->session_id);
+            } catch (\Throwable $e) {
+                $backfillEndpoint = $this->u_action;
+            }
+        } else {
+            $backfillEndpoint = $this->u_action;
+        }
+
         $template->assign_vars([
-            'S_SITEMAP_ENABLE' => $curSitemapEnable,
-            'URLS_PER_FILE'    => $curUrlsPerFile,
-            'SITEMAP_URL'      => $sitemapUrl,
-            'STAT_FORUMS'      => number_format($stats['public_forums']),
-            'STAT_TOPICS'      => number_format($stats['public_topics']),
-            'STAT_FILES'       => number_format($stats['topic_files']),
-            'STAT_MISSING'     => number_format($stats['missing_slugs']),
-            'S_ERROR'          => !empty($errors),
-            'ERROR_MSG'        => implode('<br>', $errors),
-            'U_ACTION'         => $this->u_action,
+            'S_SITEMAP_ENABLE'    => $curSitemapEnable,
+            'URLS_PER_FILE'       => $curUrlsPerFile,
+            'SITEMAP_URL'         => $sitemapUrl,
+            'STAT_FORUMS'         => number_format($stats['public_forums']),
+            'STAT_TOPICS'         => number_format($stats['public_topics']),
+            'STAT_FILES'          => number_format($stats['topic_files']),
+            'STAT_MISSING'        => number_format($stats['missing_slugs']),
+            'NUM_MISSING_RAW'     => (int) $stats['missing_slugs'],
+            'S_HAS_MISSING_SLUGS' => ((int) $stats['missing_slugs'] > 0),
+            'U_BACKFILL_ENDPOINT' => $backfillEndpoint,
+            'U_BACKFILL_ACTION'   => $this->u_action,
+            'S_ERROR'             => !empty($errors),
+            'ERROR_MSG'           => implode('<br>', $errors),
+            'U_ACTION'            => $this->u_action,
         ]);
 
         add_form_key('pseo_sitemap_form');
+        add_form_key('pseo_sitemap_rebuild', '_REBUILD');
+
+
     }
 
     private function handleSafeUninstall($container, $user, $template, $request, $config): void

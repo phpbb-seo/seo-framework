@@ -5,7 +5,20 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-05
+
+### Added
+- **Persistent Slug Backfill Engine**:
+  - Unified `SlugBackfillManager` service executing zero-offset keyset pagination (`topic_id > last_id`), multi-row DBAL insertion (`sql_multi_insert`), and missing-only filtering.
+  - Concurrency mutex locking powered by phpBB core's `\phpbb\lock\db('seo_slug_rebuild_lock')` preventing race conditions between CLI and ACP.
+  - **ACP AJAX Stepped Runner**: Interactive "Rebuild Missing Slugs" tool in the ACP Sitemap tab with real-time percentage progress bar, pause/resume capability, and automated sitemap cache invalidation upon completion.
+  - **Refactored CLI Command**: `php bin/phpbbcli.php seo:rebuild-slugs` and `phpbbseo:rebuild-slugs` updated to consume `SlugBackfillManager` with `--all` and `--batch-size` options, eliminating N+1 writes and LIMIT/OFFSET pagination.
+  - Dedicated ACP AJAX route `/seo/rebuild-slugs/batch` with session verification, administrator authorization (`a_`, `a_board`), and CSRF token protection.
+
+---
+
 ## [1.0.9] - 2026-09-05
+
 
 ### Added
 - **Legacy Ultimate SEO URL (USU) Migration & Compatibility**:

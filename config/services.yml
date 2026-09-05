@@ -92,12 +92,23 @@ services:
             - '@phpbbseo.framework.rewrite.permalink_profile'
             - '@phpbbseo.framework.configuration.provider'
 
+    phpbbseo.framework.backfill.manager:
+        class: phpbbseo\framework\Backfill\SlugBackfillManager
+        arguments:
+            - '@dbal.conn'
+            - '@config'
+            - '@phpbbseo.framework.url.slug_generator'
+            - '@phpbbseo.framework.sitemap.repository'
+            - '%core.table_prefix%'
+
     phpbbseo.framework.console.rebuild_slugs_command:
         class: phpbbseo\framework\Console\RebuildSlugsCommand
         arguments:
+            - '@phpbbseo.framework.backfill.manager'
             - '@phpbbseo.framework.rewrite.slug_repository'
         tags:
             - { name: console.command }
+
 
     # ── URL Policies ──────────────────────────────────────────────────────────
 
@@ -199,6 +210,15 @@ services:
             - '@phpbbseo.framework.sitemap.url_generator'
             - '@phpbbseo.framework.sitemap.index_builder'
             - '@phpbbseo.framework.configuration.provider'
+
+    phpbbseo.framework.controller.backfill:
+        class: phpbbseo\framework\Controller\BackfillController
+        arguments:
+            - '@phpbbseo.framework.backfill.manager'
+            - '@request'
+            - '@user'
+            - '@auth'
+
 
     # ── Update Services ───────────────────────────────────────────────────────
 

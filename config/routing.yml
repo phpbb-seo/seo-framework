@@ -24,3 +24,9 @@ phpbbseo_framework_sitemap_xsl:
     path: /sitemap.xsl
     defaults: { _controller: phpbbseo.framework.controller.sitemap:xslAction }
     methods: [GET, HEAD]
+
+phpbbseo_framework_acp_backfill:
+    path: /seo/rebuild-slugs/batch
+    defaults: { _controller: phpbbseo.framework.controller.backfill:batchAction }
+    methods: [POST]
+
