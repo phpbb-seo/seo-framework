@@ -5,6 +5,19 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-09-07
+
+### Fixed
+- **Link-Rewriting Performance & N+1 Query Elimination**:
+  - Resolved performance regression on board index and topic listings (`viewforum.php`) by implementing zero-query fast paths in `SlugRepository` for topic first post (`prev_posts = 0`) and last post (`topic_posts_approved - 1`).
+  - Added batch post position pre-seeding across `onViewForumTopics` and `onDisplayForums`, eliminating repetitive post position queries during template rendering.
+- **XML Sitemap Cache Invalidation**:
+  - Injected `SitemapRepository` into `SeoListener` to automatically purge sitemap statistics and boundary caches upon new topic creation (`onSubmitPostEnd`) and topic deletion (`onDeleteTopicsAfter`).
+  - Subscribed to `core.approve_topics_after` and `core.approve_posts_after` to persist topic slugs and invalidate sitemap caches when queued topics are approved via MCP.
+  - Enhanced `purgeStatsCache()` to invalidate boundary maps across standard chunk sizes (500 to 50,000) and custom configured values.
+
+---
+
 ## [1.1.1] - 2026-09-06
 
 ### Fixed
