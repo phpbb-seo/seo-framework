@@ -19,30 +19,6 @@ Modern, enterprise-grade Search Engine Optimization infrastructure for phpBB.
 
 ---
 
-## What's New in Version 1.1.0
-
-### 🚀 Persistent Slug Backfill Engine
-* **High-Throughput Keyset Bulk Indexing**: Built specifically for large boards with tens of thousands to 500,000+ topics. Uses zero-offset cursor pagination (`topic_id > :last_id ORDER BY topic_id ASC LIMIT :batch_size`) to eliminate SQL `OFFSET` performance degradation.
-* **Strictly Bounded Memory**: Streams batches with predictable, flat memory consumption (< 3 MB peak overhead), preventing PHP memory exhaustion on any hosting environment.
-* **Missing-Only Indexing Mode**: Automatically detects and processes only topics lacking an indexed slug via database anti-joins.
-* **Multi-Row Atomic Insertions**: Batched inserts executed within transactional boundaries for maximum integrity and throughput.
-* **Concurrency Mutex Locking**: Utilizes phpBB core's database lock provider (`\phpbb\lock\db`) to prevent race conditions between simultaneous background or web executions.
-* **Deferred Sitemap Cache Invalidation**: Intelligently invalidates XML sitemap caches only once upon 100% completion of the backfill run.
-
-### ⚡ Interactive ACP AJAX Runner
-* **Smart Notice Card**: Automatically detected and displayed in the ACP XML Sitemap section whenever missing topic slugs exist.
-* **Stepped Progress Bar**: Displays real-time percentage, processed topic counts, and status indicators without reloading the page.
-* **Pause & Resume**: Gracefully handles network drops or server timeouts with one-click resumption from the exact last processed ID.
-* **In-Place Completion**: Real-time counter synchronization immediately updates missing slug statistics to `0`.
-
-### 🖥️ Enhanced CLI Rebuild Suite
-* Full Symfony Console support via `php bin/phpbbcli.php seo:rebuild-slugs` (and alias `phpbbseo:rebuild-slugs`).
-* New `--all` flag to force rebuild all topic slugs from scratch.
-* Configurable `--batch-size` parameter (1 to 1,000 topics per batch).
-* Real-time terminal progress indicators displaying batch IDs, remaining counts, and elapsed execution timing.
-
----
-
 ## Core Features (Lite Edition)
 
 ### 🔗 Zero-SQL SEO URL Engine
@@ -123,7 +99,7 @@ Learn more about the Pro Edition at [https://www.phpbbseo.com/](https://www.phpb
 
 ## Installation
 
-1. Download the latest release package (`phpbbseo_framework_1.1.0.zip`) from the [Releases](https://github.com/phpbb-seo/seo-framework/releases) page.
+1. Download the latest release package from the [Releases](https://github.com/phpbb-seo/seo-framework/releases) page.
 2. Extract the archive and upload the files to your phpBB installation so the directory path is:
    ```text
    ext/phpbbseo/framework/
