@@ -213,12 +213,13 @@ class SeoListener implements EventSubscriberInterface
         }
 
         if (!empty($postIds)) {
-            // Batch load post-to-topic mappings in 1 query
-            $mappings = $this->slugRepository->fetchPostToTopicBatch($postIds);
-            $this->entityContext->setPostToTopic($mappings);
+            // Batch load post-to-topic mappings and post positions in 1 query
+            $batchData = $this->slugRepository->fetchPostTopicDataBatch($postIds);
+            $this->entityContext->setPostToTopic($batchData['mappings']);
+            $this->entityContext->setPostPositions($batchData['positions']);
 
             // Batch load topic slugs for those topic IDs in 1 query
-            $topicIds = array_values($mappings);
+            $topicIds = array_values($batchData['mappings']);
             if (!empty($topicIds)) {
                 $topicSlugs = $this->slugRepository->fetchSlugsBatch('topic', $topicIds);
                 $this->entityContext->setTopics($topicSlugs);
@@ -231,9 +232,11 @@ class SeoListener implements EventSubscriberInterface
         $topicIds = $event['topic_list'] ?? [];
         $rowset = $event['rowset'] ?? [];
 
-        // Collect poster user IDs and last post IDs on the page
+        // Collect poster user IDs and pre-seed topic last post positions with 0 SQL queries
         $userIds = [];
-        $postIds = [];
+        $postPositions = [];
+        $postToTopic = [];
+
         foreach ($rowset as $row) {
             if (isset($row['topic_poster'])) {
                 $userIds[] = (int) $row['topic_poster'];
@@ -242,8 +245,23 @@ class SeoListener implements EventSubscriberInterface
                 $userIds[] = (int) $row['topic_last_poster_id'];
             }
             if (isset($row['topic_last_post_id']) && $row['topic_last_post_id'] > 0) {
-                $postIds[] = (int) $row['topic_last_post_id'];
+                $lastPostId = (int) $row['topic_last_post_id'];
+                $topicId = (int) ($row['topic_id'] ?? 0);
+                $forumId = (int) ($row['forum_id'] ?? 0);
+                $postsApproved = (int) ($row['topic_posts_approved'] ?? 1);
+
+                $postToTopic[$lastPostId] = $topicId;
+                $postPositions[$lastPostId] = [
+                    'topic_id'   => $topicId,
+                    'forum_id'   => $forumId,
+                    'prev_posts' => max(0, $postsApproved - 1),
+                ];
             }
+        }
+
+        if (!empty($postToTopic)) {
+            $this->entityContext->setPostToTopic($postToTopic);
+            $this->entityContext->setPostPositions($postPositions);
         }
 
         // Batch fetch topic slugs (1 query)
@@ -256,12 +274,6 @@ class SeoListener implements EventSubscriberInterface
         if (!empty($userIds)) {
             $memberSlugs = $this->slugRepository->fetchSlugsBatch('member', $userIds);
             $this->entityContext->setMembers($memberSlugs);
-        }
-
-        // Batch fetch post-to-topic mappings (1 query)
-        if (!empty($postIds)) {
-            $mappings = $this->slugRepository->fetchPostToTopicBatch($postIds);
-            $this->entityContext->setPostToTopic($mappings);
         }
     }
 

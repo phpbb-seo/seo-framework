@@ -340,28 +340,66 @@ class SlugRepository
      */
     public function fetchPostToTopicBatch(array $postIds): array
     {
+        return $this->fetchPostTopicDataBatch($postIds)['mappings'];
+    }
+
+    /**
+     * Batch fetch post-to-topic mappings and post positions for first/last posts in 1 query.
+     *
+     * @param array<int> $postIds
+     * @return array{mappings: array<int, int>, positions: array<int, array{topic_id: int, forum_id: int, prev_posts: int}>}
+     */
+    public function fetchPostTopicDataBatch(array $postIds): array
+    {
         if (empty($postIds)) {
-            return [];
+            return ['mappings' => [], 'positions' => []];
         }
 
         $postIds = array_unique(array_map('intval', $postIds));
 
-        $sql = 'SELECT post_id, topic_id
-            FROM ' . POSTS_TABLE . '
-            WHERE ' . $this->db->sql_in_set('post_id', $postIds);
+        $sql = 'SELECT p.post_id, p.topic_id, p.forum_id, t.topic_first_post_id, t.topic_last_post_id, t.topic_posts_approved
+            FROM ' . POSTS_TABLE . ' p
+            LEFT JOIN ' . TOPICS_TABLE . ' t ON t.topic_id = p.topic_id
+            WHERE ' . $this->db->sql_in_set('p.post_id', $postIds);
 
         $result = $this->db->sql_query($sql);
         $mappings = [];
+        $positions = [];
         while ($row = $this->db->sql_fetchrow($result)) {
-            $mappings[(int) $row['post_id']] = (int) $row['topic_id'];
+            $postId = (int) $row['post_id'];
+            $topicId = (int) $row['topic_id'];
+            $forumId = (int) $row['forum_id'];
+            $mappings[$postId] = $topicId;
+
+            $lastPostId = isset($row['topic_last_post_id']) ? (int) $row['topic_last_post_id'] : 0;
+            $firstPostId = isset($row['topic_first_post_id']) ? (int) $row['topic_first_post_id'] : 0;
+            $postsApproved = isset($row['topic_posts_approved']) ? (int) $row['topic_posts_approved'] : 0;
+
+            if ($lastPostId > 0 && $postId === $lastPostId && $postsApproved > 0) {
+                $positions[$postId] = [
+                    'topic_id'   => $topicId,
+                    'forum_id'   => $forumId,
+                    'prev_posts' => max(0, $postsApproved - 1),
+                ];
+            } elseif ($firstPostId > 0 && $postId === $firstPostId) {
+                $positions[$postId] = [
+                    'topic_id'   => $topicId,
+                    'forum_id'   => $forumId,
+                    'prev_posts' => 0,
+                ];
+            }
         }
         $this->db->sql_freeresult($result);
 
-        return $mappings;
+        return [
+            'mappings'  => $mappings,
+            'positions' => $positions,
+        ];
     }
 
     /**
      * Fetch post position metadata (topic_id, forum_id, prev_posts) for canonical pagination.
+     * Uses fast-path for first and last posts without running COUNT queries.
      *
      * @param int $postId
      * @return array{topic_id: int, forum_id: int, prev_posts: int}|null
@@ -372,9 +410,11 @@ class SlugRepository
             return null;
         }
 
-        $sql = 'SELECT post_id, topic_id, forum_id, post_time, post_visibility
-            FROM ' . POSTS_TABLE . '
-            WHERE post_id = ' . (int) $postId;
+        $sql = 'SELECT p.post_id, p.topic_id, p.forum_id, p.post_time, p.post_visibility,
+                       t.topic_first_post_id, t.topic_last_post_id, t.topic_posts_approved
+            FROM ' . POSTS_TABLE . ' p
+            LEFT JOIN ' . TOPICS_TABLE . ' t ON t.topic_id = p.topic_id
+            WHERE p.post_id = ' . (int) $postId;
         $result = $this->db->sql_query($sql);
         $post = $this->db->sql_fetchrow($result);
         $this->db->sql_freeresult($result);
@@ -385,25 +425,59 @@ class SlugRepository
 
         $topicId = (int) $post['topic_id'];
         $forumId = (int) $post['forum_id'];
-        $postTime = (int) $post['post_time'];
-        $isApproved = ((int) $post['post_visibility'] === 1);
+        $firstPostId = isset($post['topic_first_post_id']) ? (int) $post['topic_first_post_id'] : 0;
+        $lastPostId = isset($post['topic_last_post_id']) ? (int) $post['topic_last_post_id'] : 0;
+        $postsApproved = isset($post['topic_posts_approved']) ? (int) $post['topic_posts_approved'] : 0;
 
-        $sql = 'SELECT COUNT(p.post_id) AS prev_posts
-            FROM ' . POSTS_TABLE . ' p
-            WHERE p.topic_id = ' . $topicId . '
-                AND p.post_visibility = 1
-                AND (p.post_time < ' . $postTime . ' OR (p.post_time = ' . $postTime . ' AND p.post_id <= ' . (int) $postId . '))';
-        $result = $this->db->sql_query($sql);
-        $countRow = $this->db->sql_fetchrow($result);
-        $this->db->sql_freeresult($result);
+        // Fast path 1: First post in topic is always on page 1 (prev_posts = 0)
+        if ($firstPostId > 0 && $postId === $firstPostId) {
+            return [
+                'topic_id'   => $topicId,
+                'forum_id'   => $forumId,
+                'prev_posts' => 0,
+            ];
+        }
 
-        $count = (int) ($countRow['prev_posts'] ?? 0);
-        $prevPosts = $isApproved ? max(0, $count - 1) : $count;
+        // Fast path 2: Last post in topic has exactly (topic_posts_approved - 1) preceding posts
+        if ($lastPostId > 0 && $postId === $lastPostId && $postsApproved > 0) {
+            return [
+                'topic_id'   => $topicId,
+                'forum_id'   => $forumId,
+                'prev_posts' => max(0, $postsApproved - 1),
+            ];
+        }
+
+        // Slow path: Arbitrary historical post — count approved posts prior to this post
+        $prevPosts = $this->countPrecedingPosts(
+            $topicId,
+            $forumId,
+            (int) $post['post_time'],
+            (int) $postId,
+            (int) $post['post_visibility'] === 1
+        );
 
         return [
             'topic_id'   => $topicId,
             'forum_id'   => $forumId,
             'prev_posts' => $prevPosts,
         ];
+    }
+
+    /**
+     * Slow-path fallback: Count approved posts preceding an arbitrary historical post.
+     */
+    public function countPrecedingPosts(int $topicId, int $forumId, int $postTime, int $postId, bool $isApproved): int
+    {
+        $sql = 'SELECT COUNT(p.post_id) AS prev_posts
+            FROM ' . POSTS_TABLE . ' p
+            WHERE p.topic_id = ' . $topicId . '
+                AND p.post_visibility = 1
+                AND (p.post_time < ' . $postTime . ' OR (p.post_time = ' . $postTime . ' AND p.post_id <= ' . $postId . '))';
+        $result = $this->db->sql_query($sql);
+        $countRow = $this->db->sql_fetchrow($result);
+        $this->db->sql_freeresult($result);
+
+        $count = (int) ($countRow['prev_posts'] ?? 0);
+        return $isApproved ? max(0, $count - 1) : $count;
     }
 }
