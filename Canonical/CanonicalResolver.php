@@ -85,9 +85,14 @@ class CanonicalResolver
                 return $this->permalinkProfile->generateGroupUrl($route->id);
 
             case 'post':
-                $topicId = $this->permalinkProfile->getEntityContext()->getTopicIdForPost($route->id);
-                if ($topicId !== null) {
-                    $topicUrl = $this->permalinkProfile->generateTopicUrl($topicId);
+                $pos = $this->permalinkProfile->getEntityContext()->getPostPosition($route->id);
+                $topicId = $pos['topic_id'] ?? $this->permalinkProfile->getEntityContext()->getTopicIdForPost($route->id);
+                if ($topicId !== null && $topicId > 0) {
+                    $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
+                    $start = isset($pos['prev_posts']) ? (int) (floor($pos['prev_posts'] / $postsPerPage) * $postsPerPage) : 0;
+                    $topicUrl = ($start > 0)
+                        ? $this->permalinkProfile->generateTopicPageUrl($topicId, $start, $postsPerPage)
+                        : $this->permalinkProfile->generateTopicUrl($topicId);
                     if ($topicUrl !== null) {
                         return $topicUrl . '#p' . $route->id;
                     }
@@ -100,30 +105,64 @@ class CanonicalResolver
 
     private function generateCanonicalForLegacy(string $script, RequestContext $context): ?string
     {
-        // Parse query from context
+        // Parse query from context (robust against single and recursive entity encoding)
         $query = [];
         if ($context->query !== '') {
-            $cleanQueryStr = str_replace('&amp;', '&', $context->query);
+            $cleanQueryStr = $context->query;
+            while (str_contains($cleanQueryStr, '&amp;')) {
+                $cleanQueryStr = str_replace('&amp;', '&', $cleanQueryStr);
+            }
             parse_str($cleanQueryStr, $query);
         }
 
         switch ($script) {
             case 'viewtopic.php':
-                $topicId = $GLOBALS['topic_id'] ?? (isset($query['t']) ? (int) $query['t'] : null);
-                if ($topicId === null) {
-                    $postId = isset($query['p']) ? (int) $query['p'] : null;
-                    if ($postId !== null) {
-                        $topicId = $this->permalinkProfile->getEntityContext()->getTopicIdForPost($postId);
-                    }
+                $pVal = $query['p'] ?? ($query['amp;p'] ?? null);
+                $postId = null;
+                if ($pVal !== null && is_numeric($pVal) && (int) $pVal > 0) {
+                    $postId = (int) $pVal;
+                } elseif (!empty($GLOBALS['post_id']) && (int) $GLOBALS['post_id'] > 0) {
+                    $postId = (int) $GLOBALS['post_id'];
                 }
 
-                if ($topicId === null) {
+                $pos = ($postId !== null)
+                    ? $this->permalinkProfile->getEntityContext()->getPostPosition($postId)
+                    : null;
+
+                $tVal = $query['t'] ?? ($query['amp;t'] ?? null);
+                $topicId = null;
+                if ($tVal !== null && is_numeric($tVal) && (int) $tVal > 0) {
+                    $topicId = (int) $tVal;
+                } elseif (!empty($GLOBALS['topic_id']) && (int) $GLOBALS['topic_id'] > 0) {
+                    $topicId = (int) $GLOBALS['topic_id'];
+                } elseif ($pos !== null) {
+                    $topicId = $pos['topic_id'];
+                } elseif ($postId !== null) {
+                    $topicId = $this->permalinkProfile->getEntityContext()->getTopicIdForPost($postId);
+                }
+
+                if ($topicId === null || $topicId <= 0) {
                     return null;
                 }
 
-                $start = $GLOBALS['start'] ?? (isset($query['start']) ? (int) $query['start'] : 0);
                 $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
-                
+
+                // Determine start offset with strict precedence:
+                // 1. Post position offset within topic if a resolvable post ID is present
+                //    (the page containing the post must be loaded so the #p{id} anchor is reachable)
+                // 2. Explicit query parameter 'start' (authoritative for pure topic pagination)
+                // 3. Global $start if positive
+                // 4. Default to 0
+                if ($pos !== null && isset($pos['prev_posts'])) {
+                    $start = (int) (floor($pos['prev_posts'] / $postsPerPage) * $postsPerPage);
+                } elseif (($startVal = $query['start'] ?? ($query['amp;start'] ?? null)) !== null && is_numeric($startVal)) {
+                    $start = max(0, (int) $startVal);
+                } elseif (!empty($GLOBALS['start']) && (int) $GLOBALS['start'] > 0) {
+                    $start = (int) $GLOBALS['start'];
+                } else {
+                    $start = 0;
+                }
+
                 if ($start > 0) {
                     $seoUrl = $this->permalinkProfile->generateTopicPageUrl($topicId, $start, $postsPerPage);
                 } else {
@@ -134,7 +173,6 @@ class CanonicalResolver
                     return null;
                 }
 
-                $postId = isset($query['p']) ? (int) $query['p'] : null;
                 if ($postId !== null) {
                     $seoUrl .= '#p' . $postId;
                 }
@@ -142,11 +180,13 @@ class CanonicalResolver
                 return $seoUrl;
 
             case 'viewforum.php':
-                $forumId = isset($query['f']) ? (int) $query['f'] : null;
-                if ($forumId === null) {
+                $fVal = $query['f'] ?? ($query['amp;f'] ?? null);
+                $forumId = ($fVal !== null && is_numeric($fVal)) ? (int) $fVal : null;
+                if ($forumId === null || $forumId <= 0) {
                     return null;
                 }
-                $start = isset($query['start']) ? (int) $query['start'] : 0;
+                $startVal = $query['start'] ?? ($query['amp;start'] ?? null);
+                $start = ($startVal !== null && is_numeric($startVal)) ? max(0, (int) $startVal) : 0;
                 $topicsPerPage = (int) $this->configProvider->get('topics_per_page', '50');
                 if ($start > 0) {
                     return $this->permalinkProfile->generateForumPageUrl($forumId, $start, $topicsPerPage);
@@ -154,14 +194,16 @@ class CanonicalResolver
                 return $this->permalinkProfile->generateForumUrl($forumId);
 
             case 'memberlist.php':
-                $userId = isset($query['u']) ? (int) $query['u'] : null;
-                $mode   = $query['mode'] ?? '';
-                if ($userId !== null && $mode === 'viewprofile') {
+                $uVal = $query['u'] ?? ($query['amp;u'] ?? null);
+                $userId = ($uVal !== null && is_numeric($uVal)) ? (int) $uVal : null;
+                $mode   = $query['mode'] ?? ($query['amp;mode'] ?? '');
+                if ($userId !== null && $userId > 0 && $mode === 'viewprofile') {
                     return $this->permalinkProfile->generateMemberUrl($userId);
                 }
 
-                $groupId = isset($query['g']) ? (int) $query['g'] : null;
-                if ($groupId !== null && $mode === 'group') {
+                $gVal = $query['g'] ?? ($query['amp;g'] ?? null);
+                $groupId = ($gVal !== null && is_numeric($gVal)) ? (int) $gVal : null;
+                if ($groupId !== null && $groupId > 0 && $mode === 'group') {
                     return $this->permalinkProfile->generateGroupUrl($groupId);
                 }
                 return null;

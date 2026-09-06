@@ -118,9 +118,24 @@ class PublicResourceUrlResolver
 
                     case 'topic':
                         $pagination = $target->getPaginationParams();
-                        $start = $pagination['start'] ?? 0;
+                        $postId = $pagination['post_id'] ?? null;
+                        $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
+                        $pos = ($postId !== null && $postId > 0)
+                            ? $this->permalinkProfile->getEntityContext()->getPostPosition($postId)
+                            : null;
+
+                        if ($pos !== null && isset($pos['prev_posts'])) {
+                            $start = (int) (floor($pos['prev_posts'] / $postsPerPage) * $postsPerPage);
+                            if ($anchor === '') {
+                                $anchor = '#p' . $postId;
+                            }
+                        } else {
+                            $start = $pagination['start'] ?? 0;
+                            if ($postId !== null && $postId > 0 && $anchor === '') {
+                                $anchor = '#p' . $postId;
+                            }
+                        }
                         if ($start > 0) {
-                            $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
                             $seoPath = $this->permalinkProfile->generateTopicPageUrl($id, $start, $postsPerPage);
                         } else {
                             $seoPath = $this->permalinkProfile->generateTopicUrl($id);
@@ -129,11 +144,16 @@ class PublicResourceUrlResolver
                         break;
 
                     case 'post':
-                        // Resolve post to its owning topic mapping
-                        $topicId = $this->permalinkProfile->getEntityContext()->getTopicIdForPost($id);
+                        // Resolve post to its owning topic mapping and page offset
+                        $pos = $this->permalinkProfile->getEntityContext()->getPostPosition($id);
+                        $topicId = $pos['topic_id'] ?? $this->permalinkProfile->getEntityContext()->getTopicIdForPost($id);
                         if ($topicId !== null) {
-                            $seoPath = $this->permalinkProfile->generateTopicUrl($topicId);
-                            $excludeKeys = ['p'];
+                            $postsPerPage = (int) $this->configProvider->get('posts_per_page', '20');
+                            $start = isset($pos['prev_posts']) ? (int) (floor($pos['prev_posts'] / $postsPerPage) * $postsPerPage) : 0;
+                            $seoPath = ($start > 0)
+                                ? $this->permalinkProfile->generateTopicPageUrl($topicId, $start, $postsPerPage)
+                                : $this->permalinkProfile->generateTopicUrl($topicId);
+                            $excludeKeys = ['p', 't', 'start'];
                             if ($anchor === '') {
                                 $anchor = '#p' . $id;
                             }
@@ -232,10 +252,18 @@ class PublicResourceUrlResolver
     private function buildQueryString(array $params, array $excludeKeys, bool $isAmp): string
     {
         $filtered = [];
+        $excludePattern = !empty($excludeKeys)
+            ? '#^(?:amp;)*(?:' . implode('|', array_map('preg_quote', $excludeKeys)) . ')$#i'
+            : null;
+
         foreach ($params as $key => $value) {
-            if (!in_array($key, $excludeKeys, true)) {
-                $filtered[$key] = $value;
+            if ($excludePattern !== null && preg_match($excludePattern, (string) $key)) {
+                continue;
             }
+            if ($excludePattern === null && in_array($key, $excludeKeys, true)) {
+                continue;
+            }
+            $filtered[$key] = $value;
         }
         if (empty($filtered)) {
             return '';

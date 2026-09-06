@@ -359,4 +359,51 @@ class SlugRepository
 
         return $mappings;
     }
+
+    /**
+     * Fetch post position metadata (topic_id, forum_id, prev_posts) for canonical pagination.
+     *
+     * @param int $postId
+     * @return array{topic_id: int, forum_id: int, prev_posts: int}|null
+     */
+    public function fetchPostPosition(int $postId): ?array
+    {
+        if ($postId <= 0) {
+            return null;
+        }
+
+        $sql = 'SELECT post_id, topic_id, forum_id, post_time, post_visibility
+            FROM ' . POSTS_TABLE . '
+            WHERE post_id = ' . (int) $postId;
+        $result = $this->db->sql_query($sql);
+        $post = $this->db->sql_fetchrow($result);
+        $this->db->sql_freeresult($result);
+
+        if (!$post) {
+            return null;
+        }
+
+        $topicId = (int) $post['topic_id'];
+        $forumId = (int) $post['forum_id'];
+        $postTime = (int) $post['post_time'];
+        $isApproved = ((int) $post['post_visibility'] === 1);
+
+        $sql = 'SELECT COUNT(p.post_id) AS prev_posts
+            FROM ' . POSTS_TABLE . ' p
+            WHERE p.topic_id = ' . $topicId . '
+                AND p.post_visibility = 1
+                AND (p.post_time < ' . $postTime . ' OR (p.post_time = ' . $postTime . ' AND p.post_id <= ' . (int) $postId . '))';
+        $result = $this->db->sql_query($sql);
+        $countRow = $this->db->sql_fetchrow($result);
+        $this->db->sql_freeresult($result);
+
+        $count = (int) ($countRow['prev_posts'] ?? 0);
+        $prevPosts = $isApproved ? max(0, $count - 1) : $count;
+
+        return [
+            'topic_id'   => $topicId,
+            'forum_id'   => $forumId,
+            'prev_posts' => $prevPosts,
+        ];
+    }
 }

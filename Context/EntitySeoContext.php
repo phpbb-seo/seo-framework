@@ -26,8 +26,11 @@ class EntitySeoContext
     /** @var array<int, int> */
     private array $postToTopic = [];
 
+    /** @var array<int, array{topic_id: int, forum_id: int, prev_posts: int}|null> */
+    private array $postPositions = [];
+
     public function __construct(
-        private readonly SlugRepository $slugRepository
+        private readonly ?SlugRepository $slugRepository = null
     ) {}
 
     /**
@@ -44,10 +47,57 @@ class EntitySeoContext
     public function getTopicIdForPost(int $postId): ?int
     {
         if (!array_key_exists($postId, $this->postToTopic)) {
-            $map = $this->slugRepository->fetchPostToTopicBatch([$postId]);
+            $map = $this->slugRepository !== null ? $this->slugRepository->fetchPostToTopicBatch([$postId]) : [];
             $this->postToTopic[$postId] = $map[$postId] ?? null;
         }
         return $this->postToTopic[$postId] ?? null;
+    }
+
+    /**
+     * Batch inject post positions.
+     * @param array<int, array{topic_id: int, forum_id: int, prev_posts: int}> $positions
+     */
+    public function setPostPositions(array $positions): void
+    {
+        foreach ($positions as $postId => $pos) {
+            $this->postPositions[(int) $postId] = $pos;
+            if (isset($pos['topic_id'])) {
+                $this->postToTopic[(int) $postId] = (int) $pos['topic_id'];
+            }
+        }
+    }
+
+    /**
+     * Inject a single post position.
+     */
+    public function setPostPosition(int $postId, int $topicId, int $prevPosts, int $forumId = 0): void
+    {
+        $this->postPositions[$postId] = [
+            'topic_id'   => $topicId,
+            'forum_id'   => $forumId,
+            'prev_posts' => $prevPosts,
+        ];
+        $this->postToTopic[$postId] = $topicId;
+    }
+
+    /**
+     * Get post position metadata (topic_id, forum_id, prev_posts) for a given post.
+     * Caches in memory to avoid duplicate queries within the request.
+     *
+     * @param int $postId
+     * @return array{topic_id: int, forum_id: int, prev_posts: int}|null
+     */
+    public function getPostPosition(int $postId): ?array
+    {
+        if (!array_key_exists($postId, $this->postPositions)) {
+            $this->postPositions[$postId] = $this->slugRepository !== null
+                ? $this->slugRepository->fetchPostPosition($postId)
+                : null;
+            if ($this->postPositions[$postId] !== null && isset($this->postPositions[$postId]['topic_id'])) {
+                $this->postToTopic[$postId] = (int) $this->postPositions[$postId]['topic_id'];
+            }
+        }
+        return $this->postPositions[$postId] ?? null;
     }
 
     /**
@@ -61,10 +111,15 @@ class EntitySeoContext
         }
     }
 
+    public function setTopicTitle(int $id, string $title): void
+    {
+        $this->topicTitles[$id] = $title;
+    }
+
     public function getTopicTitle(int $topicId): ?string
     {
         if (!array_key_exists($topicId, $this->topicTitles)) {
-            $fetched = $this->slugRepository->fetchSlugsBatch('topic', [$topicId]);
+            $fetched = $this->slugRepository !== null ? $this->slugRepository->fetchSlugsBatch('topic', [$topicId]) : [];
             $this->topicTitles[$topicId] = $fetched[$topicId] ?? null;
         }
         return $this->topicTitles[$topicId] ?? null;
@@ -81,10 +136,15 @@ class EntitySeoContext
         }
     }
 
+    public function setForumName(int $id, string $name): void
+    {
+        $this->forumNames[$id] = $name;
+    }
+
     public function getForumName(int $forumId): ?string
     {
         if (!array_key_exists($forumId, $this->forumNames)) {
-            $fetched = $this->slugRepository->fetchSlugsBatch('forum', [$forumId]);
+            $fetched = $this->slugRepository !== null ? $this->slugRepository->fetchSlugsBatch('forum', [$forumId]) : [];
             $this->forumNames[$forumId] = $fetched[$forumId] ?? null;
         }
         return $this->forumNames[$forumId] ?? null;
@@ -101,10 +161,15 @@ class EntitySeoContext
         }
     }
 
+    public function setUsername(int $id, string $username): void
+    {
+        $this->usernames[$id] = $username;
+    }
+
     public function getUsername(int $userId): ?string
     {
         if (!array_key_exists($userId, $this->usernames)) {
-            $fetched = $this->slugRepository->fetchSlugsBatch('member', [$userId]);
+            $fetched = $this->slugRepository !== null ? $this->slugRepository->fetchSlugsBatch('member', [$userId]) : [];
             $this->usernames[$userId] = $fetched[$userId] ?? null;
         }
         return $this->usernames[$userId] ?? null;
@@ -121,10 +186,15 @@ class EntitySeoContext
         }
     }
 
+    public function setGroupName(int $id, string $name): void
+    {
+        $this->groupNames[$id] = $name;
+    }
+
     public function getGroupName(int $groupId): ?string
     {
         if (!array_key_exists($groupId, $this->groupNames)) {
-            $fetched = $this->slugRepository->fetchSlugsBatch('group', [$groupId]);
+            $fetched = $this->slugRepository !== null ? $this->slugRepository->fetchSlugsBatch('group', [$groupId]) : [];
             $this->groupNames[$groupId] = $fetched[$groupId] ?? null;
         }
         return $this->groupNames[$groupId] ?? null;

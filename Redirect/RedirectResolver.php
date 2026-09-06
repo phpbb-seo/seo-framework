@@ -34,15 +34,27 @@ class RedirectResolver
         if ($normalizedCurrent !== $normalizedCanonical) {
             $targetUrl = $canonicalUrl;
             if (!empty($context->query)) {
-                $cleanQuery = str_replace('&amp;', '&', $context->query);
+                $cleanQuery = $context->query;
+                while (str_contains($cleanQuery, '&amp;')) {
+                    $cleanQuery = str_replace('&amp;', '&', $cleanQuery);
+                }
                 parse_str($cleanQuery, $queryParams);
                 $excludeParams = ['t', 'f', 'p', 'u', 'g', 'start', 'sid', 'mode', 'seo_page'];
-                foreach ($excludeParams as $ep) {
-                    unset($queryParams[$ep]);
-                    unset($queryParams['amp;' . $ep]);
+                $excludePattern = '#^(?:amp;)*(?:' . implode('|', array_map('preg_quote', $excludeParams)) . ')$#i';
+                foreach (array_keys($queryParams) as $paramKey) {
+                    if (preg_match($excludePattern, (string) $paramKey)) {
+                        unset($queryParams[$paramKey]);
+                    }
                 }
                 if (!empty($queryParams)) {
+                    $fragment = '';
+                    $hashPos = strpos($targetUrl, '#');
+                    if ($hashPos !== false) {
+                        $fragment = substr($targetUrl, $hashPos);
+                        $targetUrl = substr($targetUrl, 0, $hashPos);
+                    }
                     $targetUrl .= (str_contains($targetUrl, '?') ? '&' : '?') . http_build_query($queryParams);
+                    $targetUrl .= $fragment;
                 }
             }
 

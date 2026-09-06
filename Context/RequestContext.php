@@ -14,7 +14,7 @@ class RequestContext
         public readonly string $path,
         public readonly string $query,
         public readonly string $route,
-        public readonly ?int $entityId,
-        public readonly ?int $pagination
+        public readonly ?int $entityId = null,
+        public readonly ?int $pagination = null
     ) {}
 }

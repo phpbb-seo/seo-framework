@@ -5,6 +5,26 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-06
+
+### Fixed
+- **Canonical Pagination & Entity Encoding**:
+  - Resolved an issue where entity-encoded ampersands (single `&amp;start=` or double `&amp;amp;start=`) and zero-initialized global request states shadowed the query parameter, causing native paginated URLs (e.g. `viewtopic.php?t=X&start=Y`) to lose their offset and redirect to page 1.
+  - Implemented recursive entity-decoding for request query strings prior to parameter extraction.
+- **Direct Post Resolution & Deep Linking**:
+  - Resolved direct post requests (`viewtopic.php?p=POST_ID`) to the specific paginated canonical URL (e.g. `/topic/slug-ID/page/X/#pPOST_ID`) based on the post's actual position (`prev_posts`) within the topic and board visibility rules, ensuring the `#p...` DOM anchor is directly reachable.
+  - Prevented generation of invalid phantom canonical URLs (such as `-0/`) when an unresolvable post ID is requested, correctly failing closed to 404.
+- **Routing Parameter Sanitization**:
+  - Stripped single- and deeply-encoded routing parameter leftovers (e.g. `?amp%3Bamp%3Bstart=20`) from redirect target URLs, avoiding stray or malformed query strings.
+- **Precedence Conflict Resolution**:
+  - Prioritized the verified post position over any conflicting or stale explicit `start` parameter whenever a resolvable post ID is present, ensuring visitors land on the page containing the post.
+  - Hardened query exclusion regex with `preg_quote` consistency across `RedirectResolver` and `PublicResourceUrlResolver`.
+
+### Improved
+- Clean preservation of non-routing tracking query parameters (`utm_*`, `gclid`, etc.) preceding fragment anchors in canonical redirect targets.
+
+---
+
 ## [1.1.0] - 2026-09-05
 
 ### Added
