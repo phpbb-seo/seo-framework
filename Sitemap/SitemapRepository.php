@@ -326,12 +326,18 @@ class SitemapRepository
     /**
      * Purge both stats cache and topic boundary map caches.
      */
-    public function purgeStatsCache(): void
+    public function purgeStatsCache(?int $chunkSize = null): void
     {
         $this->cache->destroy(self::STATS_CACHE_KEY);
         $this->cache->destroy(sprintf(self::BOUNDARY_CACHE_KEY, 50000));
+        if ($chunkSize !== null && $chunkSize > 0) {
+            $this->cache->destroy(sprintf(self::BOUNDARY_CACHE_KEY, $chunkSize));
+        }
         for ($size = 100; $size <= 50000; $size += 5000) {
             $this->cache->destroy(sprintf(self::BOUNDARY_CACHE_KEY, $size));
+        }
+        foreach ([500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000] as $s) {
+            $this->cache->destroy(sprintf(self::BOUNDARY_CACHE_KEY, $s));
         }
     }
 }

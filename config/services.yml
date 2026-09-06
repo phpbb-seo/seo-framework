@@ -163,6 +163,7 @@ services:
             - '@phpbbseo.framework.url.pagination_resolver'
             - '@template'
             - '@user'
+            - '@phpbbseo.framework.sitemap.repository'
         tags:
             - { name: event.listener }
 

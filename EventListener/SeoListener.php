@@ -12,6 +12,7 @@ use phpbbseo\framework\Redirect\UrlSafetyValidator;
 use phpbbseo\framework\Rewrite\InboundRouteResolver;
 use phpbbseo\framework\Rewrite\PublicResourceUrlResolver;
 use phpbbseo\framework\Rewrite\SlugRepository;
+use phpbbseo\framework\Sitemap\SitemapRepository;
 use phpbbseo\framework\Url\PaginationResolver;
 use phpbb\template\template;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -35,7 +36,8 @@ class SeoListener implements EventSubscriberInterface
         private readonly SlugRepository $slugRepository,
         private readonly PaginationResolver $paginationResolver,
         private readonly template $template,
-        private readonly \phpbb\user $user
+        private readonly \phpbb\user $user,
+        private readonly ?SitemapRepository $sitemapRepository = null
     ) {}
 
     public static function getSubscribedEvents(): array
@@ -73,6 +75,9 @@ class SeoListener implements EventSubscriberInterface
             'core.delete_forum_content_before_query'    => 'onForumDeleteBefore',
             'core.acp_manage_group_request_data'        => 'onGroupUpdateAfter',
             'core.delete_group_after'                   => 'onGroupDeleteAfter',
+            // Moderation approval synchronization
+            'core.approve_topics_after'                 => 'onApproveTopicsAfter',
+            'core.approve_posts_after'                  => 'onApprovePostsAfter',
         ];
     }
 
@@ -596,6 +601,9 @@ class SeoListener implements EventSubscriberInterface
 
         if ($topicId > 0 && $isFirstPost && $subject !== '') {
             $this->slugRepository->saveSlug('topic', $topicId, $subject, (int) time());
+            if ($this->sitemapRepository !== null) {
+                $this->sitemapRepository->purgeStatsCache();
+            }
         }
     }
 
@@ -604,6 +612,45 @@ class SeoListener implements EventSubscriberInterface
         $topicIds = $event['topic_ids'] ?? [];
         foreach ($topicIds as $topicId) {
             $this->slugRepository->deleteSlug('topic', (int) $topicId);
+        }
+
+        if ($this->sitemapRepository !== null && !empty($topicIds)) {
+            $this->sitemapRepository->purgeStatsCache();
+        }
+    }
+
+    public function onApproveTopicsAfter($event): void
+    {
+        $topicInfo = $event['topic_info'] ?? [];
+        foreach ($topicInfo as $topic) {
+            $topicId = (int) ($topic['topic_id'] ?? 0);
+            $title = (string) ($topic['topic_title'] ?? '');
+            if ($topicId > 0 && $title !== '') {
+                $this->slugRepository->saveSlug('topic', $topicId, $title, (int) time());
+            }
+        }
+
+        if ($this->sitemapRepository !== null && !empty($topicInfo)) {
+            $this->sitemapRepository->purgeStatsCache();
+        }
+    }
+
+    public function onApprovePostsAfter($event): void
+    {
+        $numTopics = (int) ($event['num_topics'] ?? 0);
+        $topicInfo = $event['topic_info'] ?? [];
+        if ($numTopics > 0) {
+            foreach ($topicInfo as $topic) {
+                $topicId = (int) ($topic['topic_id'] ?? 0);
+                $title = (string) ($topic['topic_title'] ?? '');
+                if ($topicId > 0 && $title !== '') {
+                    $this->slugRepository->saveSlug('topic', $topicId, $title, (int) time());
+                }
+            }
+
+            if ($this->sitemapRepository !== null) {
+                $this->sitemapRepository->purgeStatsCache();
+            }
         }
     }
 
