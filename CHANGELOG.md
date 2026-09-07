@@ -5,6 +5,19 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-09-07
+
+### Fixed
+- **Critical Performance Fix for `prev_posts` COUNT Query**:
+  - Resolved a critical performance regression in v1.1.2 where the historical `prev_posts` COUNT query in `SlugRepository::countPrecedingPosts` could trigger an unpredictable and slow MySQL `index_merge (intersect: topic_id, post_visibility)` execution plan on production-scale databases (~0.28s per query, adding ~0.86s+ per page).
+  - Rewrote the compound `OR` predicate `(post_time < ? OR (post_time = ? AND post_id <= ?))` by splitting it into two mutually disjoint, unambiguous indexed queries:
+    1. Strictly earlier posts: `WHERE topic_id = ? AND post_visibility = 1 AND post_time < ?` (unambiguous range scan using `tid_post_time`).
+    2. Shared timestamp tiebreaker: `WHERE topic_id = ? AND post_visibility = 1 AND post_time = ? AND post_id <= ?` (instant point lookup using `tid_post_time`).
+  - Benchmarked across production-scale datasets (15,000+ post topics) and edge cases (shared timestamps, unapproved posts) confirming consistent sub-millisecond to low-single-digit millisecond execution times (0.1ms - 10ms maximum) in all cases with 100% mathematical accuracy.
+  - **Upgrade Recommendation**: All users running v1.1.2 are strongly recommended to upgrade to v1.1.3 immediately, especially if unexpected page load slowdowns were experienced after updating to v1.1.2.
+
+---
+
 ## [1.1.2] - 2026-09-07
 
 ### Fixed

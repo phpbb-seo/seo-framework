@@ -465,19 +465,38 @@ class SlugRepository
 
     /**
      * Slow-path fallback: Count approved posts preceding an arbitrary historical post.
+     *
+     * Restructured into two unambiguous indexed queries to prevent MySQL query-plan
+     * ambiguity (avoiding index_merge on large tables with composite tid_post_time index):
+     *   1. Posts with post_time strictly less than target post.
+     *   2. Posts with identical post_time and post_id <= target post (tiebreaker).
      */
     public function countPrecedingPosts(int $topicId, int $forumId, int $postTime, int $postId, bool $isApproved): int
     {
-        $sql = 'SELECT COUNT(p.post_id) AS prev_posts
+        // 1. Count approved posts strictly earlier than target timestamp
+        $sql1 = 'SELECT COUNT(p.post_id) AS prev_posts
             FROM ' . POSTS_TABLE . ' p
-            WHERE p.topic_id = ' . $topicId . '
+            WHERE p.topic_id = ' . (int) $topicId . '
                 AND p.post_visibility = 1
-                AND (p.post_time < ' . $postTime . ' OR (p.post_time = ' . $postTime . ' AND p.post_id <= ' . $postId . '))';
-        $result = $this->db->sql_query($sql);
-        $countRow = $this->db->sql_fetchrow($result);
-        $this->db->sql_freeresult($result);
+                AND p.post_time < ' . (int) $postTime;
+        $result1 = $this->db->sql_query($sql1);
+        $countRow1 = $this->db->sql_fetchrow($result1);
+        $this->db->sql_freeresult($result1);
+        $count1 = (int) ($countRow1['prev_posts'] ?? 0);
 
-        $count = (int) ($countRow['prev_posts'] ?? 0);
-        return $isApproved ? max(0, $count - 1) : $count;
+        // 2. Count approved posts at the exact same timestamp with post_id <= target
+        $sql2 = 'SELECT COUNT(p.post_id) AS prev_posts
+            FROM ' . POSTS_TABLE . ' p
+            WHERE p.topic_id = ' . (int) $topicId . '
+                AND p.post_visibility = 1
+                AND p.post_time = ' . (int) $postTime . '
+                AND p.post_id <= ' . (int) $postId;
+        $result2 = $this->db->sql_query($sql2);
+        $countRow2 = $this->db->sql_fetchrow($result2);
+        $this->db->sql_freeresult($result2);
+        $count2 = (int) ($countRow2['prev_posts'] ?? 0);
+
+        $totalCount = $count1 + $count2;
+        return $isApproved ? max(0, $totalCount - 1) : $totalCount;
     }
 }

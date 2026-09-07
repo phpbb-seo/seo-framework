@@ -133,6 +133,72 @@ class SlugRepositoryPostPositionTest extends TestCase
         // Post 20 is first post of topic 2 -> prev_posts = 0
         $this->assertSame(0, $batch['positions'][20]['prev_posts']);
     }
+
+    public function testCountPrecedingPostsExecutesTwoUnambiguousQueries(): void
+    {
+        $mockDb = new MockSequenceDatabaseDriver([
+            // Query 1: strictly earlier posts
+            ['prev_posts' => 15],
+            // Query 2: tiebreaker for exact timestamp (includes target post itself)
+            ['prev_posts' => 1],
+        ]);
+
+        $mockGenerator = new MockSlugGenerator();
+        $repo = new SlugRepository($mockDb, $mockGenerator, 'phpbb_');
+
+        // Target post is approved
+        $count = $repo->countPrecedingPosts(5, 2, 1200000000, 50, true);
+
+        // 15 earlier + 1 tie - 1 (since target is approved) = 15 preceding posts
+        $this->assertSame(15, $count);
+        $this->assertSame(2, count($mockDb->queriesExecuted));
+
+        // Verify Query 1 structure: strictly earlier (<) without OR
+        $this->assertTrue(str_contains($mockDb->queriesExecuted[0], 'AND p.post_time < 1200000000'));
+        $this->assertFalse(str_contains($mockDb->queriesExecuted[0], 'OR'));
+
+        // Verify Query 2 structure: exact tiebreaker (= and <=) without OR
+        $this->assertTrue(str_contains($mockDb->queriesExecuted[1], 'AND p.post_time = 1200000000'));
+        $this->assertTrue(str_contains($mockDb->queriesExecuted[1], 'AND p.post_id <= 50'));
+        $this->assertFalse(str_contains($mockDb->queriesExecuted[1], 'OR'));
+    }
+
+    public function testCountPrecedingPostsHandlesTiebreakerWithMultiplePosts(): void
+    {
+        $mockDb = new MockSequenceDatabaseDriver([
+            // Query 1: 10 strictly earlier posts
+            ['prev_posts' => 10],
+            // Query 2: 3 posts at exact same timestamp with post_id <= target
+            ['prev_posts' => 3],
+        ]);
+
+        $mockGenerator = new MockSlugGenerator();
+        $repo = new SlugRepository($mockDb, $mockGenerator, 'phpbb_');
+
+        // Target post is approved
+        $count = $repo->countPrecedingPosts(5, 2, 1200000000, 75, true);
+
+        // 10 earlier + 3 tie - 1 = 12 preceding posts
+        $this->assertSame(12, $count);
+    }
+
+    public function testCountPrecedingPostsHandlesUnapprovedTargetPost(): void
+    {
+        $mockDb = new MockSequenceDatabaseDriver([
+            // Query 1: 8 strictly earlier posts
+            ['prev_posts' => 8],
+            // Query 2: 0 posts with exact same timestamp and post_id <= target (target is unapproved, so not counted)
+            ['prev_posts' => 0],
+        ]);
+
+        $mockGenerator = new MockSlugGenerator();
+        $repo = new SlugRepository($mockDb, $mockGenerator, 'phpbb_');
+
+        // Target post is unapproved (isApproved = false, so no -1 subtraction)
+        $count = $repo->countPrecedingPosts(5, 2, 1200000000, 75, false);
+
+        $this->assertSame(8, $count);
+    }
 }
 
 class MockSlugGenerator implements SlugGeneratorInterface
@@ -171,6 +237,31 @@ class MockBatchDatabaseDriver extends MockDatabaseDriver
 {
     private int $index = 0;
     public function __construct(private readonly array $rows) { parent::__construct(null); }
+    public function sql_fetchrow($query_id = false)
+    {
+        if ($this->index < count($this->rows)) {
+            return $this->rows[$this->index++];
+        }
+        return false;
+    }
+}
+
+class MockSequenceDatabaseDriver extends MockDatabaseDriver
+{
+    public array $queriesExecuted = [];
+    private int $index = 0;
+
+    public function __construct(private readonly array $rows)
+    {
+        parent::__construct(null);
+    }
+
+    public function sql_query($query = '', $cache_ttl = 0)
+    {
+        $this->queriesExecuted[] = $query;
+        return true;
+    }
+
     public function sql_fetchrow($query_id = false)
     {
         if ($this->index < count($this->rows)) {
