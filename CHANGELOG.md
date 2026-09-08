@@ -5,6 +5,19 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-09-08
+
+### Fixed
+- **Critical Performance Fix for `prev_posts` Range Query (FORCE INDEX & Safe Fallback)**:
+  - Fixed a critical performance issue where v1.1.3's range query (`topic_id = ? AND post_visibility = 1 AND post_time < ?`) could still be misjudged by MySQL's cost-based optimizer as `index_merge (intersect: topic_id, post_visibility)` on large production databases (~0.29s per call, accumulating ~1.23s of latency on affected pages), despite testing fast on test copies.
+  - Added an explicit `FORCE INDEX (tid_post_time)` hint on MySQL/MariaDB connections for Query 1, locking the query execution plan to `type: range` and completely preventing MySQL from selecting inefficient `index_merge` scans.
+  - Hardened with automatic safe fallback: if `tid_post_time` is missing or modified for any reason (custom schemas, third-party alterations, legacy tables), error 1176 is caught gracefully without throwing fatal errors (`E_USER_ERROR`), immediately falling back to the plain query and caching this state in memory for the remainder of the request.
+  - Non-MySQL database drivers (PostgreSQL, SQLite, Oracle, MSSQL) cleanly bypass the hint and execute standard SQL.
+  - **Live Production Verification**: Confirmed fixed on an active production board by the reporting user — query execution time dropped from ~290-310ms to ~5-9ms, reducing total page generation time from ~1.33s to ~0.167s with EXPLAIN confirming `type: range, key: tid_post_time`.
+  - **Upgrade Recommendation**: All users running v1.1.2 or v1.1.3 are strongly urged to upgrade to v1.1.4 immediately.
+
+---
+
 ## [1.1.3] - 2026-09-07
 
 ### Fixed

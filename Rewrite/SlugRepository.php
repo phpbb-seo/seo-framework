@@ -11,6 +11,18 @@ use phpbbseo\framework\Url\SlugGeneratorInterface;
  */
 class SlugRepository
 {
+    /**
+     * Cache flag indicating whether FORCE INDEX is supported and valid on the active database.
+     * If forcing tid_post_time fails (e.g. custom schema missing the index), this flips to false
+     * to avoid repeating failed index hints and immediately use the plain query.
+     */
+    private static bool $useForceIndex = true;
+
+    public static function resetForceIndexState(): void
+    {
+        self::$useForceIndex = true;
+    }
+
     public function __construct(
         private readonly driver_interface $db,
         private readonly SlugGeneratorInterface $slugGenerator,
@@ -473,16 +485,52 @@ class SlugRepository
      */
     public function countPrecedingPosts(int $topicId, int $forumId, int $postTime, int $postId, bool $isApproved): int
     {
-        // 1. Count approved posts strictly earlier than target timestamp
-        $sql1 = 'SELECT COUNT(p.post_id) AS prev_posts
-            FROM ' . POSTS_TABLE . ' p
-            WHERE p.topic_id = ' . (int) $topicId . '
-                AND p.post_visibility = 1
-                AND p.post_time < ' . (int) $postTime;
-        $result1 = $this->db->sql_query($sql1);
-        $countRow1 = $this->db->sql_fetchrow($result1);
-        $this->db->sql_freeresult($result1);
-        $count1 = (int) ($countRow1['prev_posts'] ?? 0);
+        $isMysql = (stripos($this->db->get_sql_layer(), 'mysql') !== false);
+        $shouldForceIndex = $isMysql && self::$useForceIndex;
+
+        $count1 = 0;
+        $query1Succeeded = false;
+
+        // 1. Attempt Query 1 with FORCE INDEX on MySQL/MariaDB to prevent index_merge
+        if ($shouldForceIndex) {
+            $sql1Forced = 'SELECT COUNT(p.post_id) AS prev_posts
+                FROM ' . POSTS_TABLE . ' p FORCE INDEX (tid_post_time)
+                WHERE p.topic_id = ' . (int) $topicId . '
+                    AND p.post_visibility = 1
+                    AND p.post_time < ' . (int) $postTime;
+
+            $this->db->sql_return_on_error(true);
+            try {
+                $result1 = $this->db->sql_query($sql1Forced);
+                if ($result1 !== false) {
+                    $countRow1 = $this->db->sql_fetchrow($result1);
+                    $this->db->sql_freeresult($result1);
+                    $count1 = (int) ($countRow1['prev_posts'] ?? 0);
+                    $query1Succeeded = true;
+                } else {
+                    // Forced index query failed (e.g. index tid_post_time does not exist)
+                    self::$useForceIndex = false;
+                }
+            } catch (\Throwable) {
+                // Caught under PHP 8.1+ mysqli error reporting mode
+                self::$useForceIndex = false;
+            } finally {
+                $this->db->sql_return_on_error(false);
+            }
+        }
+
+        // Fallback: Run plain query without index hint if FORCE INDEX was not attempted or failed
+        if (!$query1Succeeded) {
+            $sql1Plain = 'SELECT COUNT(p.post_id) AS prev_posts
+                FROM ' . POSTS_TABLE . ' p
+                WHERE p.topic_id = ' . (int) $topicId . '
+                    AND p.post_visibility = 1
+                    AND p.post_time < ' . (int) $postTime;
+            $result1 = $this->db->sql_query($sql1Plain);
+            $countRow1 = $this->db->sql_fetchrow($result1);
+            $this->db->sql_freeresult($result1);
+            $count1 = (int) ($countRow1['prev_posts'] ?? 0);
+        }
 
         // 2. Count approved posts at the exact same timestamp with post_id <= target
         $sql2 = 'SELECT COUNT(p.post_id) AS prev_posts

@@ -17,6 +17,11 @@ if (!defined('TOPICS_TABLE')) {
 
 class SlugRepositoryPostPositionTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        SlugRepository::resetForceIndexState();
+    }
+
     public function testFastPathForTopicLastPostBypassesCountQuery(): void
     {
         $mockDb = new MockDatabaseDriver([
@@ -153,14 +158,14 @@ class SlugRepositoryPostPositionTest extends TestCase
         $this->assertSame(15, $count);
         $this->assertSame(2, count($mockDb->queriesExecuted));
 
-        // Verify Query 1 structure: strictly earlier (<) without OR
+        // Verify Query 1 structure: strictly earlier (<) without OR clause
         $this->assertTrue(str_contains($mockDb->queriesExecuted[0], 'AND p.post_time < 1200000000'));
-        $this->assertFalse(str_contains($mockDb->queriesExecuted[0], 'OR'));
+        $this->assertFalse(str_contains($mockDb->queriesExecuted[0], ' OR '));
 
-        // Verify Query 2 structure: exact tiebreaker (= and <=) without OR
+        // Verify Query 2 structure: exact tiebreaker (= and <=) without OR clause
         $this->assertTrue(str_contains($mockDb->queriesExecuted[1], 'AND p.post_time = 1200000000'));
         $this->assertTrue(str_contains($mockDb->queriesExecuted[1], 'AND p.post_id <= 50'));
-        $this->assertFalse(str_contains($mockDb->queriesExecuted[1], 'OR'));
+        $this->assertFalse(str_contains($mockDb->queriesExecuted[1], ' OR '));
     }
 
     public function testCountPrecedingPostsHandlesTiebreakerWithMultiplePosts(): void
@@ -199,6 +204,112 @@ class SlugRepositoryPostPositionTest extends TestCase
 
         $this->assertSame(8, $count);
     }
+
+    public function testCountPrecedingPostsAppliesForceIndexOnMysqlDrivers(): void
+    {
+        foreach (['mysqli', 'mysql'] as $driver) {
+            SlugRepository::resetForceIndexState();
+
+            $mockDb = new MockSequenceDatabaseDriver([
+                ['prev_posts' => 10],
+                ['prev_posts' => 3],
+            ], $driver);
+
+            $mockGenerator = new MockSlugGenerator();
+            $repo = new SlugRepository($mockDb, $mockGenerator, 'phpbb_');
+
+            $count = $repo->countPrecedingPosts(5, 2, 1200000000, 75, true);
+
+            $this->assertSame(12, $count);
+            $this->assertCount(2, $mockDb->queriesExecuted);
+
+            // Query 1 must contain FORCE INDEX (tid_post_time)
+            $expectedQuery1 = "SELECT COUNT(p.post_id) AS prev_posts\n                FROM " . POSTS_TABLE . " p FORCE INDEX (tid_post_time)\n                WHERE p.topic_id = 5\n                    AND p.post_visibility = 1\n                    AND p.post_time < 1200000000";
+
+            $this->assertSame($expectedQuery1, str_replace("\r\n", "\n", $mockDb->queriesExecuted[0]), "Driver {$driver} must produce exact FORCE INDEX query string");
+            $this->assertStringContainsString('FORCE INDEX (tid_post_time)', $mockDb->queriesExecuted[0]);
+
+            // Query 2 (exact match tiebreaker) must not have FORCE INDEX
+            $this->assertStringNotContainsString('FORCE INDEX', $mockDb->queriesExecuted[1]);
+        }
+    }
+
+    public function testCountPrecedingPostsBypassesForceIndexOnNonMysqlDrivers(): void
+    {
+        $nonMysqlDrivers = ['postgres', 'sqlite3', 'oracle', 'mssqlnative', 'mssql_odbc'];
+
+        foreach ($nonMysqlDrivers as $driver) {
+            SlugRepository::resetForceIndexState();
+
+            $mockDb = new MockSequenceDatabaseDriver([
+                ['prev_posts' => 10],
+                ['prev_posts' => 3],
+            ], $driver);
+
+            $mockGenerator = new MockSlugGenerator();
+            $repo = new SlugRepository($mockDb, $mockGenerator, 'phpbb_');
+
+            $count = $repo->countPrecedingPosts(5, 2, 1200000000, 75, true);
+
+            $this->assertSame(12, $count);
+            $this->assertCount(2, $mockDb->queriesExecuted);
+
+            // Query 1 must NOT contain FORCE INDEX on non-MySQL driver
+            $expectedQuery1 = "SELECT COUNT(p.post_id) AS prev_posts\n                FROM " . POSTS_TABLE . " p\n                WHERE p.topic_id = 5\n                    AND p.post_visibility = 1\n                    AND p.post_time < 1200000000";
+
+            $this->assertSame($expectedQuery1, str_replace("\r\n", "\n", $mockDb->queriesExecuted[0]), "Driver {$driver} must produce byte-for-byte plain query");
+            $this->assertStringNotContainsString('FORCE INDEX', $mockDb->queriesExecuted[0]);
+            $this->assertStringNotContainsString('FORCE INDEX', $mockDb->queriesExecuted[1]);
+        }
+    }
+
+    public function testCountPrecedingPostsFallsBackToPlainQueryOnForceIndexFailure(): void
+    {
+        SlugRepository::resetForceIndexState();
+
+        $mockDb = new MockFailingForceIndexDatabaseDriver();
+        $mockGenerator = new MockSlugGenerator();
+        $repo = new SlugRepository($mockDb, $mockGenerator, 'phpbb_');
+
+        // Call 1: FORCE INDEX fails, fallback executes plain query, returns correct count (12)
+        $count1 = $repo->countPrecedingPosts(5, 2, 1200000000, 75, true);
+
+        $this->assertSame(12, $count1);
+        $this->assertCount(3, $mockDb->queriesExecuted);
+        $this->assertStringContainsString('FORCE INDEX (tid_post_time)', $mockDb->queriesExecuted[0]);
+        $this->assertStringNotContainsString('FORCE INDEX', $mockDb->queriesExecuted[1]);
+        $this->assertStringNotContainsString('FORCE INDEX', $mockDb->queriesExecuted[2]);
+
+        // Call 2: In-memory cache flag (self::$useForceIndex == false) skips FORCE INDEX immediately
+        $mockDb->queriesExecuted = [];
+        $mockDb->resetFetch();
+        $count2 = $repo->countPrecedingPosts(5, 2, 1200000000, 75, true);
+
+        $this->assertSame(12, $count2);
+        $this->assertCount(2, $mockDb->queriesExecuted, 'Subsequent call must immediately use plain query without re-attempting failed FORCE INDEX');
+        $this->assertStringNotContainsString('FORCE INDEX', $mockDb->queriesExecuted[0]);
+        $this->assertStringNotContainsString('FORCE INDEX', $mockDb->queriesExecuted[1]);
+
+        SlugRepository::resetForceIndexState();
+    }
+
+    public function testCountPrecedingPostsCatchesExceptionAndFallsBack(): void
+    {
+        SlugRepository::resetForceIndexState();
+
+        $mockDb = new MockThrowingForceIndexDatabaseDriver();
+        $mockGenerator = new MockSlugGenerator();
+        $repo = new SlugRepository($mockDb, $mockGenerator, 'phpbb_');
+
+        $count = $repo->countPrecedingPosts(5, 2, 1200000000, 75, true);
+
+        $this->assertSame(12, $count);
+        $this->assertCount(3, $mockDb->queriesExecuted);
+        $this->assertStringContainsString('FORCE INDEX (tid_post_time)', $mockDb->queriesExecuted[0]);
+        $this->assertStringNotContainsString('FORCE INDEX', $mockDb->queriesExecuted[1]);
+
+        SlugRepository::resetForceIndexState();
+    }
 }
 
 class MockSlugGenerator implements SlugGeneratorInterface
@@ -224,6 +335,12 @@ class MockDatabaseDriver extends \phpbb\db\driver\mysqli
 {
     public function __construct(protected ?array $row = null) {}
 
+    public function get_sql_layer()
+    {
+        return 'mysqli';
+    }
+
+    public function sql_return_on_error($fail = false) {}
     public function sql_query($query = '', $cache_ttl = 0) { return true; }
     public function sql_fetchrow($query_id = false) { return $this->row; }
     public function sql_freeresult($query_id = false) { return true; }
@@ -251,9 +368,14 @@ class MockSequenceDatabaseDriver extends MockDatabaseDriver
     public array $queriesExecuted = [];
     private int $index = 0;
 
-    public function __construct(private readonly array $rows)
+    public function __construct(private readonly array $rows, private readonly string $layer = 'mysqli')
     {
         parent::__construct(null);
+    }
+
+    public function get_sql_layer()
+    {
+        return $this->layer;
     }
 
     public function sql_query($query = '', $cache_ttl = 0)
@@ -268,6 +390,67 @@ class MockSequenceDatabaseDriver extends MockDatabaseDriver
             return $this->rows[$this->index++];
         }
         return false;
+    }
+}
+
+class MockFailingForceIndexDatabaseDriver extends MockDatabaseDriver
+{
+    public array $queriesExecuted = [];
+    public bool $returnOnError = false;
+    private int $fallbackQueryCount = 0;
+
+    public function sql_return_on_error($fail = false)
+    {
+        $this->returnOnError = $fail;
+    }
+
+    public function resetFetch(): void
+    {
+        $this->fallbackQueryCount = 0;
+    }
+
+    public function sql_query($query = '', $cache_ttl = 0)
+    {
+        $this->queriesExecuted[] = $query;
+        if (str_contains($query, 'FORCE INDEX')) {
+            return false;
+        }
+        $this->fallbackQueryCount++;
+        return true;
+    }
+
+    public function sql_fetchrow($query_id = false)
+    {
+        if ($this->fallbackQueryCount === 1) {
+            return ['prev_posts' => 10];
+        }
+        return ['prev_posts' => 3];
+    }
+}
+
+class MockThrowingForceIndexDatabaseDriver extends MockDatabaseDriver
+{
+    public array $queriesExecuted = [];
+    private int $fallbackQueryCount = 0;
+
+    public function sql_return_on_error($fail = false) {}
+
+    public function sql_query($query = '', $cache_ttl = 0)
+    {
+        $this->queriesExecuted[] = $query;
+        if (str_contains($query, 'FORCE INDEX')) {
+            throw new \RuntimeException("Key 'tid_post_time' doesn't exist in table 'p'", 1176);
+        }
+        $this->fallbackQueryCount++;
+        return true;
+    }
+
+    public function sql_fetchrow($query_id = false)
+    {
+        if ($this->fallbackQueryCount === 1) {
+            return ['prev_posts' => 10];
+        }
+        return ['prev_posts' => 3];
     }
 }
 
