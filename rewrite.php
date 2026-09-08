@@ -70,7 +70,13 @@ if ($routes === null || (!is_array($routes) && !file_exists($cacheFile))) {
 
 $rawUri = $_SERVER['REQUEST_URI'] ?? '';
 $qPos = strpos($rawUri, '?');
-$path = ($qPos !== false) ? substr($rawUri, 0, $qPos) : $rawUri;
+if ($qPos === false && preg_match('~^(/.*?)/(?:&amp;|&)(.*)$~i', $rawUri, $ampMatches)) {
+    $path = $ampMatches[1] . '/';
+    parse_str($ampMatches[2], $extraGet);
+    $_GET = array_merge($_GET, $extraGet);
+} else {
+    $path = ($qPos !== false) ? substr($rawUri, 0, $qPos) : $rawUri;
+}
 $path = rawurldecode($path);
 
 // Determine board web path prefix (e.g. "/phpbb/ext/..." -> "/phpbb", "/ext/..." -> "")

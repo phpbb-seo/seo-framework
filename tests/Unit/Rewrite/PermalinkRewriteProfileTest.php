@@ -93,7 +93,7 @@ class PermalinkRewriteProfileTest extends TestCase
     {
         $this->entityContext->setTopicTitle(582, 'phpBB SEO Framework');
         $url = $this->profile->generateTopicPageUrl(582, 20, 20); // start=20, 20 per page → page 2
-        $this->assertSame('/topic/phpbb-seo-framework-582/page-2/', $url);
+        $this->assertSame('/topic/phpbb-seo-framework-582/page/2/', $url);
     }
 
     public function testTopicPage1CanonicalIsBaseUrl(): void

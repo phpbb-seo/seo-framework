@@ -5,7 +5,7 @@ Modern, enterprise-grade Search Engine Optimization infrastructure for phpBB.
 [![phpBB Version](https://img.shields.io/badge/phpBB-3.3.0--3.3.17+-blue.svg)](https://www.phpbb.com/)
 [![PHP Version](https://img.shields.io/badge/PHP-7.4%20%7C%208.0%20%7C%208.1%20%7C%208.2%20%7C%208.3-777bb4.svg)](https://php.net/)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL--2.0--only-green.svg)](LICENSE)
-[![GitHub Release](https://img.shields.io/github/v/release/phpbb-seo/seo-framework.svg)](https://github.com/phpbb-seo/seo-framework/releases/tag/v1.1.2)
+[![GitHub Release](https://img.shields.io/github/v/release/phpbb-seo/seo-framework.svg)](https://github.com/phpbb-seo/seo-framework/releases/tag/v1.1.5)
 
 ---
 
@@ -15,7 +15,7 @@ Modern, enterprise-grade Search Engine Optimization infrastructure for phpBB.
 
 * **Official Website**: [https://www.phpbbseo.com/](https://www.phpbbseo.com/)
 * **GitHub Repository**: [https://github.com/phpbb-seo/seo-framework](https://github.com/phpbb-seo/seo-framework)
-* **Latest Release**: [v1.1.2](https://github.com/phpbb-seo/seo-framework/releases/tag/v1.1.2)
+* **Latest Release**: [v1.1.5](https://github.com/phpbb-seo/seo-framework/releases/tag/v1.1.5)
 
 ---
 

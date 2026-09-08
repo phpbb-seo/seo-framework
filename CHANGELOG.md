@@ -5,6 +5,22 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-09-09
+
+### Performance
+- **Post-Position Fast Path**: Pre-calculated post positions (`prev_posts`) during `viewtopic.php` execution within `SeoListener::onViewTopicPosts` when chronological display (`post_time ASC`) and zero unapproved/soft-deleted posts are present. Eliminates redundant database lookups for on-page jump/quote permalinks, reducing page generation overhead to extension-disabled baseline levels (~0.113s).
+
+### Fixed
+- **RecentTopics Malformed Outbound URLs**: Added listeners for `avathar.recenttopics.modify_tpl_ary` and `paybas.recenttopics.modify_tpl_ary` (`onRecentTopicsModifyTplAry`) to heal naive third-party parameter concatenation (`&amp;view=unread#unread`) appended directly onto slash-terminated SEO URLs.
+- **Inbound Query Parameter Fail-Safe**: Added route-level normalization in `rewrite.php` and `InboundRouteResolver` to gracefully recover and redirect malformed URLs containing trailing `/&` or `/&amp;` query separators.
+- **Illegal Superglobal Access**: Fixed fatal error (`deactivated_super_global`) triggered in `SeoListener` on requests with non-print `view` query parameters (e.g., `view=unread`) by migrating legacy `$_GET['view']` checks to phpBB's `$request` service abstraction.
+
+### Improved
+- **Clean Topic Permalinks**: Excluded redundant `'f'` (forum ID) parameter from rewritten topic permalinks in `PublicResourceUrlResolver`. In phpBB, topic rows inherently store their parent `forum_id`; stripping this redundant query argument ensures clean, canonical topic URLs and prevented masking third-party concatenation bugs during testing.
+- **Route Cache File Path Robustness**: Normalized `$storeDir` in `RouteCacheCompiler` to guarantee a trailing slash, preventing malformed cache file paths when initialized with directory paths lacking trailing slashes.
+
+---
+
 ## [1.1.4] - 2026-09-08
 
 ### Fixed

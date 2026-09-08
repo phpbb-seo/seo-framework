@@ -28,6 +28,11 @@ class InboundRouteResolver
             $path = '/' . ltrim(substr($path, strlen($boardPath)), '/');
         }
 
+        // Normalize malformed query parameters attached via /& or /&amp;
+        if (preg_match('~^(/.*?)/(?:&amp;|&).*$~i', $path, $ampMatches)) {
+            $path = $ampMatches[1] . '/';
+        }
+
         // Try topic (paginated first, then base)
         $match = $this->profile->matchTopic($path);
         if ($match !== null) {

@@ -66,6 +66,14 @@ class PublicResourceUrlResolver
 
         // Merge query parameters that were embedded inside the base URL
         $queryStr = parse_url($url, PHP_URL_QUERY);
+        if ($queryStr === null || $queryStr === '') {
+            // Intercept naive parameter attachment where '&' or '&amp;' was used without '?'
+            // e.g. /topic/slug-123/&view=unread or viewtopic.php&t=123
+            if (preg_match('~(?:&amp;|&)([^#]+)$~i', $url, $ampMatch)) {
+                $queryStr = $ampMatch[1];
+                $url = substr($url, 0, -strlen($ampMatch[0]));
+            }
+        }
         if ($queryStr !== null && $queryStr !== '') {
             $cleanQueryStr = str_replace('&amp;', '&', $queryStr);
             parse_str($cleanQueryStr, $urlParams);
@@ -140,7 +148,7 @@ class PublicResourceUrlResolver
                         } else {
                             $seoPath = $this->permalinkProfile->generateTopicUrl($id);
                         }
-                        $excludeKeys = ['t', 'start', 'p'];
+                        $excludeKeys = ['t', 'start', 'p', 'f'];
                         break;
 
                     case 'post':
@@ -153,7 +161,7 @@ class PublicResourceUrlResolver
                             $seoPath = ($start > 0)
                                 ? $this->permalinkProfile->generateTopicPageUrl($topicId, $start, $postsPerPage)
                                 : $this->permalinkProfile->generateTopicUrl($topicId);
-                            $excludeKeys = ['p', 't', 'start'];
+                            $excludeKeys = ['p', 't', 'start', 'f'];
                             if ($anchor === '') {
                                 $anchor = '#p' . $id;
                             }
@@ -172,7 +180,8 @@ class PublicResourceUrlResolver
                 }
 
                 if ($seoPath !== null) {
-                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
+                    $hasExistingQuery = str_contains($seoPath, '?');
+                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp, $hasExistingQuery);
                     $finalUrl = $boardPath . ltrim($seoPath, '/') . $queryString . $anchor;
                     return $this->normalizeDuplicateFragments($finalUrl);
                 }
@@ -198,7 +207,8 @@ class PublicResourceUrlResolver
                 $seoPath = $this->permalinkProfile->generateTopicPageUrl($id, $start, $postsPerPage);
                 if ($seoPath !== null) {
                     $excludeKeys = ['start'];
-                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
+                    $hasExistingQuery = str_contains($seoPath, '?');
+                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp, $hasExistingQuery);
                     $finalUrl = $boardPath . ltrim($seoPath, '/') . $queryString . $anchor;
                     return $this->normalizeDuplicateFragments($finalUrl);
                 }
@@ -214,7 +224,8 @@ class PublicResourceUrlResolver
                 $seoPath = $this->permalinkProfile->generateForumPageUrl($id, $start, $topicsPerPage);
                 if ($seoPath !== null) {
                     $excludeKeys = ['start'];
-                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp);
+                    $hasExistingQuery = str_contains($seoPath, '?');
+                    $queryString = $this->buildQueryString($parsedParams, $excludeKeys, $isAmp, $hasExistingQuery);
                     $finalUrl = $boardPath . ltrim($seoPath, '/') . $queryString . $anchor;
                     return $this->normalizeDuplicateFragments($finalUrl);
                 }
@@ -229,7 +240,8 @@ class PublicResourceUrlResolver
             $cleanPath = ltrim(substr($normClean, strlen($boardPrefix)), '/');
         }
 
-        $queryString = $this->buildQueryString($parsedParams, [], $isAmp);
+        $hasExistingQuery = str_contains($cleanPath, '?');
+        $queryString = $this->buildQueryString($parsedParams, [], $isAmp, $hasExistingQuery);
         $finalUrl = $boardPath . $cleanPath . $queryString . $anchor;
         return $this->normalizeDuplicateFragments($finalUrl);
     }
@@ -249,7 +261,7 @@ class PublicResourceUrlResolver
     /**
      * Rebuilds the query string for non-routing parameters.
      */
-    private function buildQueryString(array $params, array $excludeKeys, bool $isAmp): string
+    private function buildQueryString(array $params, array $excludeKeys, bool $isAmp, bool $hasExistingQuery = false): string
     {
         $filtered = [];
         $excludePattern = !empty($excludeKeys)
@@ -273,7 +285,8 @@ class PublicResourceUrlResolver
         if ($isAmp) {
             $queryString = str_replace('&', '&amp;', $queryString);
         }
-        return '?' . $queryString;
+        $separator = $hasExistingQuery ? ($isAmp ? '&amp;' : '&') : '?';
+        return $separator . $queryString;
     }
 
     /**
@@ -294,6 +307,7 @@ class PublicResourceUrlResolver
     private function normalizeBoardPath(string $rawPath, string $boardPath): string
     {
         $rawPath = str_replace('\\', '/', $rawPath);
+        $hasTrailingSlash = str_ends_with($rawPath, '/');
         
         $boardPrefix = rtrim($boardPath, '/');
         if ($boardPrefix !== '' && str_starts_with($rawPath, $boardPrefix . '/')) {
@@ -314,6 +328,10 @@ class PublicResourceUrlResolver
                 $cleanSegments[] = $segment;
             }
         }
-        return implode('/', $cleanSegments);
+        $result = implode('/', $cleanSegments);
+        if ($hasTrailingSlash && $result !== '') {
+            $result .= '/';
+        }
+        return $result;
     }
 }

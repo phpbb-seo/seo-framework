@@ -78,6 +78,9 @@ class SeoListener implements EventSubscriberInterface
             // Moderation approval synchronization
             'core.approve_topics_after'                 => 'onApproveTopicsAfter',
             'core.approve_posts_after'                  => 'onApprovePostsAfter',
+            // Recent topics extension URL healing (prevents naive & or &amp; concatenation on board index)
+            'avathar.recenttopics.modify_tpl_ary'       => 'onRecentTopicsModifyTplAry',
+            'paybas.recenttopics.modify_tpl_ary'        => 'onRecentTopicsModifyTplAry',
         ];
     }
 
@@ -189,7 +192,7 @@ class SeoListener implements EventSubscriberInterface
         // Do not redirect view=print requests (utility print view must render directly with NOINDEX)
         $rawUri = (string) $this->request->server('REQUEST_URI', '');
         $view = (string) $this->request->variable('view', '');
-        if ($view === 'print' || (isset($_GET['view']) && $_GET['view'] === 'print') || str_contains($rawUri, 'view=print')) {
+        if ($view === 'print' || str_contains($rawUri, 'view=print')) {
             return;
         }
 
@@ -312,6 +315,48 @@ class SeoListener implements EventSubscriberInterface
             }
             if (!empty($postToTopic)) {
                 $this->entityContext->setPostToTopic($postToTopic);
+            }
+
+            // Safe Pre-seeding: Pre-calculate post positions for displayed posts
+            // ONLY under verified safe conditions (chronological post_time ASC sort, zero unapproved/deleted posts in topic)
+            $sortDir = (string) ($event['sort_dir'] ?? 'a');
+            $sortKey = (string) ($event['sort_key'] ?? 't');
+            $topicPostsUnapproved = (int) ($topicData['topic_posts_unapproved'] ?? 0);
+            $topicPostsDeleted = (int) ($topicData['topic_posts_softdeleted'] ?? 0);
+            $hasExplicitStart = isset($event['start']) && is_numeric($event['start']);
+            $start = $hasExplicitStart ? (int) $event['start'] : -1;
+            $forumId = (int) ($topicData['forum_id'] ?? ($event['forum_id'] ?? 0));
+
+            $isSafeToPreseed = $hasExplicitStart
+                && ($sortDir === 'a' || $sortDir === '')
+                && ($sortKey === 't' || $sortKey === '')
+                && $topicPostsUnapproved === 0
+                && $topicPostsDeleted === 0
+                && $start >= 0
+                && !empty($rowset);
+
+            if ($isSafeToPreseed) {
+                $postPositions = [];
+                $offset = $start;
+                $allRowsSafe = true;
+
+                foreach ($rowset as $row) {
+                    if (!isset($row['post_id'])
+                        || (int) ($row['post_visibility'] ?? 0) !== 1
+                        || (int) ($row['topic_id'] ?? $topicId) !== $topicId) {
+                        $allRowsSafe = false;
+                        break;
+                    }
+                    $postPositions[(int) $row['post_id']] = [
+                        'topic_id'   => $topicId,
+                        'forum_id'   => $forumId,
+                        'prev_posts' => $offset++,
+                    ];
+                }
+
+                if ($allRowsSafe && !empty($postPositions)) {
+                    $this->entityContext->setPostPositions($postPositions);
+                }
             }
         }
 
@@ -441,7 +486,7 @@ class SeoListener implements EventSubscriberInterface
         // Bypass legacy rewrite redirects for utility pages (e.g. view=print must render directly with NOINDEX)
         $rawUri = (string) $this->request->server('REQUEST_URI', '');
         $view = (string) $this->request->variable('view', '');
-        if ($view === 'print' || (isset($_GET['view']) && $_GET['view'] === 'print') || str_contains($rawUri, 'view=print')) {
+        if ($view === 'print' || str_contains($rawUri, 'view=print')) {
             return;
         }
 
@@ -506,7 +551,7 @@ class SeoListener implements EventSubscriberInterface
         // Do not redirect view=print requests (utility print view must render directly with NOINDEX)
         $rawUri = (string) $this->request->server('REQUEST_URI', '');
         $view = (string) $this->request->variable('view', '');
-        if ($view === 'print' || (isset($_GET['view']) && $_GET['view'] === 'print') || str_contains($rawUri, 'view=print')) {
+        if ($view === 'print' || str_contains($rawUri, 'view=print')) {
             return;
         }
 
@@ -580,6 +625,34 @@ class SeoListener implements EventSubscriberInterface
         $resolved = $this->urlResolver->resolve($baseUrl, $params);
         if ($resolved !== null) {
             $event['generate_page_link_override'] = $resolved;
+        }
+    }
+
+    public function onRecentTopicsModifyTplAry($event): void
+    {
+        if (!$this->configProvider->isRewriteEnabled()) {
+            return;
+        }
+
+        $tplAry = $event['tpl_ary'] ?? [];
+        if (!is_array($tplAry)) {
+            return;
+        }
+
+        $modified = false;
+        foreach (['U_NEWEST_POST', 'U_LAST_POST', 'U_VIEW_TOPIC'] as $key) {
+            if (isset($tplAry[$key]) && is_string($tplAry[$key])) {
+                // Correct naive 3rd-party extension concatenation where & or &amp; follows a slash-terminated SEO URL
+                $fixed = preg_replace('~(/)(?:&amp;|&)([^#]*)~i', '$1?$2', $tplAry[$key]);
+                if ($fixed !== null && $fixed !== $tplAry[$key]) {
+                    $tplAry[$key] = $fixed;
+                    $modified = true;
+                }
+            }
+        }
+
+        if ($modified) {
+            $event['tpl_ary'] = $tplAry;
         }
     }
 

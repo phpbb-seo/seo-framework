@@ -8,9 +8,18 @@ use phpbbseo\framework\Redirect\UrlSafetyValidator;
 
 class UrlSafetyValidatorTest extends TestCase
 {
+    private function createValidator(): UrlSafetyValidator
+    {
+        $config = $this->createMock(\phpbbseo\framework\Configuration\ConfigurationProvider::class);
+        $config->method('get')->willReturnMap([
+            ['server_name', 'localhost', 'trusted.com'],
+        ]);
+        return new UrlSafetyValidator($config);
+    }
+
     public function testSafetyValidation(): void
     {
-        $validator = new UrlSafetyValidator('trusted.com');
+        $validator = $this->createValidator();
         
         $this->assertTrue($validator->isSafe('https://trusted.com/path'));
         $this->assertTrue($validator->isSafe('http://trusted.com/'));
@@ -29,7 +38,7 @@ class UrlSafetyValidatorTest extends TestCase
 
     public function testUrlNormalizationForLoopDetection(): void
     {
-        $validator = new UrlSafetyValidator('trusted.com');
+        $validator = $this->createValidator();
         
         // Scheme case, host case, default ports, missing trailing slash on host
         $norm1 = $validator->normalizeUrl('HTTP://TRUSTED.com:80');
