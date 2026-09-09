@@ -12,6 +12,7 @@ services:
         class: phpbbseo\framework\Context\RequestContextFactory
         arguments:
             - '@phpbbseo.framework.configuration.provider'
+            - '@phpbbseo.framework.redirect.url_safety_validator'
 
     phpbbseo.framework.context.entity_seo_context:
         class: phpbbseo\framework\Context\EntitySeoContext

@@ -5,6 +5,23 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2026-09-09
+
+### Fixed
+- **Subdomain & Misconfigured Host 301 Redirect Regression**:
+  - Resolved an issue where native legacy URLs (`viewtopic.php?t=X` and `viewforum.php?f=X`) silently failed to 301-redirect to their clean canonical SEO permalinks on boards hosted on subdomains (e.g. `forum.example.com` where `server_name` in ACP was set to the apex domain `example.com`), or on boards where `server_name` was unconfigured (`localhost`) or prefixed with a scheme (`https://`).
+  - Centralized host extraction and strict domain trust validation in `UrlSafetyValidator::isHostTrusted()`, establishing a unified, authoritative validation engine across both `UrlSafetyValidator` and `RequestContextFactory`.
+  - Added support for legitimate subdomain hierarchies (`str_ends_with($targetHost, '.' . $trustedHost)`) and matching against live request host / `generate_board_url()` while strictly rejecting arbitrary open redirect vectors (boundary collisions like `evil-domain.com`, suffix spoofs like `domain.com.evil.com`, CRLF, and unsafe schemes).
+- **Double-Slash in Core Canonical Tag (`//`) & Duplicate Tag Elimination**:
+  - Fixed duplicate and malformed `<link rel="canonical">` and `<meta name="description">` tags reported in Google Search Console ("More than one canonical tag").
+  - phpBB core's `viewforum.php` line 463 concatenates `generate_board_url() . '/' . append_sid(...)`, which introduced a double slash (`https://domain.com//forum/...`) when combined with rewritten root-relative paths.
+  - Resolved across three defensive layers:
+    1. Hardened `CanonicalResolver` with single-slash normalization (`rtrim($boardUrl, '/') . '/' . ltrim($cleanSeoPath, '/')`) and automated scheme deduplication (`https://https://` cleanup).
+    2. Healed template-assigned variable `U_CANONICAL` in `SeoListener::onViewForumTopics` so template references always receive the clean canonical URL.
+    3. Added buffer-level deduplication in `MetadataListener` to cleanly strip any core/template-rendered canonical and description tags before outputting the single authoritative SEO metadata block.
+
+---
+
 ## [1.1.5] - 2026-09-09
 
 ### Performance

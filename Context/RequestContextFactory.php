@@ -11,9 +11,14 @@ use phpbb\request\request_interface;
  */
 class RequestContextFactory
 {
+    private ?\phpbbseo\framework\Redirect\UrlSafetyValidator $validator = null;
+
     public function __construct(
-        private readonly ConfigurationProvider $configProvider
-    ) {}
+        private readonly ConfigurationProvider $configProvider,
+        ?\phpbbseo\framework\Redirect\UrlSafetyValidator $validator = null
+    ) {
+        $this->validator = $validator;
+    }
 
     public function createFromPhpbbRequest(request_interface $request): RequestContext
     {
@@ -59,21 +64,24 @@ class RequestContextFactory
         }
 
         $observedHost = strtolower(trim($observedHost));
-        $configuredHost = strtolower($this->getConfiguredHost());
-
-        // For foundation, we only trust the configured host.
-        // If they differ, we enforce the configured host.
-        if ($observedHost !== $configuredHost) {
-            return $configuredHost;
+        if ($observedHost === '') {
+            return $this->getConfiguredHost();
         }
 
-        return $observedHost;
+        // Strip port for domain matching
+        $obsDomain = \phpbbseo\framework\Redirect\UrlSafetyValidator::extractDomain($observedHost);
+
+        $validator = $this->validator ?? new \phpbbseo\framework\Redirect\UrlSafetyValidator($this->configProvider);
+        if ($validator->isHostTrusted($obsDomain, $obsDomain)) {
+            return $observedHost;
+        }
+
+        return $this->getConfiguredHost();
     }
 
     private function getConfiguredHost(): string
     {
-        $rawServerName = $this->configProvider->get('server_name', 'localhost');
-        $serverName = parse_url('http://' . $rawServerName, PHP_URL_HOST) ?: $rawServerName;
+        $serverName = \phpbbseo\framework\Redirect\UrlSafetyValidator::extractDomain((string) $this->configProvider->get('server_name', 'localhost'));
         $serverPort = (int) $this->configProvider->get('server_port', 80);
 
         if ($serverPort !== 80 && $serverPort !== 443) {

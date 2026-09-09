@@ -16,7 +16,7 @@ class RedirectResolver
             return null;
         }
 
-        if (!$validator->isSafe($canonicalUrl)) {
+        if (!$validator->isSafe($canonicalUrl, $context->host)) {
             return null; // Do not redirect to an unsafe canonical URL
         }
 

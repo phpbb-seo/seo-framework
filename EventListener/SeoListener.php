@@ -283,6 +283,15 @@ class SeoListener implements EventSubscriberInterface
             $memberSlugs = $this->slugRepository->fetchSlugsBatch('member', $userIds);
             $this->entityContext->setMembers($memberSlugs);
         }
+
+        // Heal template U_CANONICAL if phpBB core viewforum.php line 463 naively concatenated generate_board_url() . '/' . append_sid()
+        if ($this->configProvider->isRewriteEnabled()) {
+            $context = $this->contextFactory->createFromPhpbbRequest($this->request);
+            $canonicalUrl = $this->canonicalResolver->resolve($context);
+            if ($canonicalUrl !== null) {
+                $this->template->assign_var('U_CANONICAL', $canonicalUrl);
+            }
+        }
     }
 
     public function onViewTopicForum($event): void

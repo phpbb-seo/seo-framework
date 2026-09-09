@@ -215,6 +215,9 @@ class CanonicalResolver
     private function buildAbsoluteUrl(string $seoPath, RequestContext $context): string
     {
         $boardUrl = rtrim(generate_board_url(), '/');
+        if (preg_match('#^https?://#i', $boardUrl, $schemeMatch)) {
+            $boardUrl = $schemeMatch[0] . preg_replace('#^(?:https?://)+#i', '', $boardUrl);
+        }
         $scriptPath = (string) parse_url($boardUrl, PHP_URL_PATH);
         $boardPath = '/' . trim($scriptPath, '/');
 
@@ -226,6 +229,6 @@ class CanonicalResolver
             }
         }
 
-        return $boardUrl . $cleanSeoPath;
+        return rtrim($boardUrl, '/') . '/' . ltrim($cleanSeoPath, '/');
     }
 }

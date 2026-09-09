@@ -161,6 +161,16 @@ class MetadataListener implements EventSubscriberInterface
                     $buffer = str_replace($socialMatches[0], "\n", $buffer);
                 }
 
+                // Strip any existing/template-rendered canonical tags to prevent duplicate <link rel="canonical"> tags
+                if ($finalEscapedCanonical !== null && $finalEscapedCanonical !== '') {
+                    $buffer = preg_replace('#\s*<link\b(?=[^>]*\brel=["\']canonical["\'])[^>]*>\s*#si', "\n", $buffer);
+                }
+
+                // Strip any existing/template-rendered description tags to prevent duplicate <meta name="description"> tags
+                if ($finalEscapedDesc !== null && $finalEscapedDesc !== '') {
+                    $buffer = preg_replace('#\s*<meta\b(?=[^>]*\bname=["\']description["\'])[^>]*>\s*#si', "\n", $buffer);
+                }
+
                 return preg_replace_callback('#<title>(.*?)</title>#si', function ($matches) use ($finalEscapedTitle, $finalEscapedDesc, $finalEscapedCanonical, $jsonLdBlock, $socialBlock) {
                     $prefix = '';
                     if (preg_match('#^(\(\d+\)\s*)#u', trim($matches[1]), $pMatch)) {

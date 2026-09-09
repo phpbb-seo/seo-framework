@@ -24,8 +24,18 @@ class UrlSafetyValidatorTest extends TestCase
         $this->assertTrue($validator->isSafe('https://trusted.com/path'));
         $this->assertTrue($validator->isSafe('http://trusted.com/'));
         
-        // Unsafe hosts
+        // Subdomain of trusted host
+        $this->assertTrue($validator->isSafe('https://forum.trusted.com/topic/test-1/'));
+        $this->assertTrue($validator->isSafe('https://sub.forum.trusted.com/topic/test-1/'));
+        
+        // Current request host explicitly passed
+        $this->assertTrue($validator->isSafe('https://sub.domain.com/topic/test-1/', 'sub.domain.com'));
+
+        // Unsafe hosts & boundary collision attacks
         $this->assertFalse($validator->isSafe('https://evil.com/path'));
+        $this->assertFalse($validator->isSafe('https://evil-trusted.com/path')); // Hyphenated boundary attack
+        $this->assertFalse($validator->isSafe('https://nottrusted.com/path')); // Substring boundary attack
+        $this->assertFalse($validator->isSafe('https://trusted.com.evil.com/path')); // Subdomain suffix attack
         
         // Unsafe schemes
         $this->assertFalse($validator->isSafe('javascript:alert(1)'));
