@@ -78,9 +78,6 @@ class SeoListener implements EventSubscriberInterface
             // Moderation approval synchronization
             'core.approve_topics_after'                 => 'onApproveTopicsAfter',
             'core.approve_posts_after'                  => 'onApprovePostsAfter',
-            // Recent topics extension URL healing (prevents naive & or &amp; concatenation on board index)
-            'avathar.recenttopics.modify_tpl_ary'       => 'onRecentTopicsModifyTplAry',
-            'paybas.recenttopics.modify_tpl_ary'        => 'onRecentTopicsModifyTplAry',
         ];
     }
 
@@ -634,34 +631,6 @@ class SeoListener implements EventSubscriberInterface
         $resolved = $this->urlResolver->resolve($baseUrl, $params);
         if ($resolved !== null) {
             $event['generate_page_link_override'] = $resolved;
-        }
-    }
-
-    public function onRecentTopicsModifyTplAry($event): void
-    {
-        if (!$this->configProvider->isRewriteEnabled()) {
-            return;
-        }
-
-        $tplAry = $event['tpl_ary'] ?? [];
-        if (!is_array($tplAry)) {
-            return;
-        }
-
-        $modified = false;
-        foreach (['U_NEWEST_POST', 'U_LAST_POST', 'U_VIEW_TOPIC'] as $key) {
-            if (isset($tplAry[$key]) && is_string($tplAry[$key])) {
-                // Correct naive 3rd-party extension concatenation where & or &amp; follows a slash-terminated SEO URL
-                $fixed = preg_replace('~(/)(?:&amp;|&)([^#]*)~i', '$1?$2', $tplAry[$key]);
-                if ($fixed !== null && $fixed !== $tplAry[$key]) {
-                    $tplAry[$key] = $fixed;
-                    $modified = true;
-                }
-            }
-        }
-
-        if ($modified) {
-            $event['tpl_ary'] = $tplAry;
         }
     }
 

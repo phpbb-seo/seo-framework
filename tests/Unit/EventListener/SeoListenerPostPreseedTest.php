@@ -168,22 +168,4 @@ class SeoListenerPostPreseedTest extends TestCase
         $this->listener->onViewTopicPosts($event);
         $this->assertNull($this->entityContext->getPostPosition(501));
     }
-
-    public function testRecentTopicsUrlHealing(): void
-    {
-        $event = new \ArrayObject([
-            'tpl_ary' => [
-                'U_NEWEST_POST' => '/topic/slug-100/&view=unread#unread',
-                'U_LAST_POST'   => '/topic/slug-100/&amp;p=500#p500',
-                'U_VIEW_TOPIC'  => '/topic/slug-100/',
-            ],
-        ]);
-
-        $this->listener->onRecentTopicsModifyTplAry($event);
-
-        $tpl = $event['tpl_ary'];
-        $this->assertSame('/topic/slug-100/?view=unread#unread', $tpl['U_NEWEST_POST']);
-        $this->assertSame('/topic/slug-100/?p=500#p500', $tpl['U_LAST_POST']);
-        $this->assertSame('/topic/slug-100/', $tpl['U_VIEW_TOPIC']);
-    }
 }

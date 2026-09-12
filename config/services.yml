@@ -129,6 +129,22 @@ services:
     phpbbseo.framework.redirect.resolver:
         class: phpbbseo\framework\Redirect\RedirectResolver
 
+    phpbbseo.framework.redirect.migration_redirector:
+        class: phpbbseo\framework\Redirect\MigrationRedirector
+        arguments:
+            - '@dbal.conn'
+            - '@request'
+            - '@config'
+            - '@phpbbseo.framework.configuration.provider'
+            - '@phpbbseo.framework.rewrite.public_resource_url_resolver'
+            - '@phpbbseo.framework.rewrite.slug_repository'
+            - '@phpbbseo.framework.context.entity_seo_context'
+            - '%core.table_prefix%'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+        tags:
+            - { name: event.listener }
+
     # ── Metadata Engine ───────────────────────────────────────────────────────
 
     phpbbseo.framework.metadata.plain_text_normalizer:
@@ -178,6 +194,15 @@ services:
             - '@request'
             - '@phpbbseo.framework.canonical.resolver'
             - '@phpbbseo.framework.context.factory'
+        tags:
+            - { name: event.listener }
+
+    # ── Compatibility Shims ───────────────────────────────────────────────────
+
+    phpbbseo.framework.compatibility.recenttopics:
+        class: phpbbseo\framework\Compatibility\RecentTopicsCompatibility
+        arguments:
+            - '@phpbbseo.framework.configuration.provider'
         tags:
             - { name: event.listener }
 
