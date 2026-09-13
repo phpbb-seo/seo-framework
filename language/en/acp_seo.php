@@ -167,9 +167,26 @@ $lang = array_merge($lang, [
     'SEO_HTACCESS_NOT_WRITABLE_TOOLTIP'    => 'The root .htaccess file is not writable by PHP. Please copy and paste the rules below manually.',
 
     // Legacy Migration (USU Compatibility)
-    'SEO_LEGACY_MIGRATION_TITLE'       => 'Legacy Migration Compatibility (USU / phpBB SEO)',
-    'SEO_LEGACY_USU_ENABLE'            => 'Enable Ultimate SEO URLs (USU) 301 Redirects',
-    'SEO_LEGACY_USU_ENABLE_EXPLAIN'    => 'Automatically detects legacy Ultimate SEO URL (USU) links (*-t{id}.html, *-f{id}.html, member{id}.html, post{id}.html) and issues single-hop HTTP 301 permanent redirects to active Lite canonical URLs. Requires zero database mapping and zero legacy USU files.',
-    'SEO_LEGACY_USU_WARNING'           => 'Only enable this if this site previously used Ultimate SEO URLs (USU). If this site never used USU, leave this OFF — enabling it unnecessarily will cause the board to 301-redirect unrelated URLs that happen to match legacy patterns (e.g. anything ending in -f{number} or -t{number}), which is not appropriate for a site without USU history.',
+    'SEO_LEGACY_MIGRATION_TITLE'          => 'Legacy Migration Compatibility (USU / phpBB SEO)',
+    'SEO_LEGACY_USU_ENABLE'               => 'Enable Ultimate SEO URLs (USU) 301 Redirects',
+    'SEO_LEGACY_USU_ENABLE_EXPLAIN'       => 'Automatically detects legacy Ultimate SEO URL (USU) links (*-t{id}.html, *-f{id}.html, member{id}.html, post{id}.html) and issues single-hop HTTP 301 permanent redirects to active Lite canonical URLs. Requires zero database mapping and zero legacy USU files.',
+    'SEO_LEGACY_USU_WARNING'              => 'Only enable this if this site previously used Ultimate SEO URLs (USU). If this site never used USU, leave this OFF — enabling it unnecessarily will cause the board to 301-redirect unrelated URLs that happen to match legacy patterns (e.g. anything ending in -f{number} or -t{number}), which is not appropriate for a site without USU history.',
+
+    // Cross-Platform Migration (XenForo, vBulletin, MyBB, SMF)
+    'SEO_MIGRATION_REDIRECT_TITLE'          => 'Cross-Platform Migration 301 Redirects (XenForo / vBulletin / MyBB / SMF)',
+    'SEO_MIGRATION_REDIRECT_ENABLE'         => 'Enable Migration 301 Redirect Engine',
+    'SEO_MIGRATION_REDIRECT_ENABLE_EXPLAIN' => 'Intercepts inbound links from other forum engines and performs instant HTTP 301 permanent redirects to phpBB SEO canonical URLs. Default is OFF.',
+    'SEO_MIGRATION_REDIRECT_WARNING'        => 'Only enable this engine if this board was actually migrated from another forum platform. If your site was always phpBB, leave this OFF — enabling it unnecessarily will evaluate foreign URL patterns on every request and risks matching unrelated URLs.',
+    'SEO_MIGRATION_PLATFORMS'               => 'Active Source Platforms',
+    'SEO_MIGRATION_PLATFORMS_EXPLAIN'       => 'Select only the platform(s) this board migrated from to avoid evaluating unnecessary URL patterns:',
+    'SEO_MIGRATION_PLATFORM_XENFORO'        => 'XenForo (/threads/, /forums/, /posts/, /members/)',
+    'SEO_MIGRATION_PLATFORM_VBULLETIN'      => 'vBulletin (showthread.php, forumdisplay.php, showpost.php, member.php, /forum/)',
+    'SEO_MIGRATION_PLATFORM_MYBB'           => 'MyBB (thread-{id}.html, forum-{id}.html, post-{id}.html, user-{id}.html)',
+    'SEO_MIGRATION_PLATFORM_SMF'            => 'Simple Machines Forum (index.php?topic=..., board=..., action=profile)',
+    'SEO_MIGRATION_PRESERVE_IDS'            => 'Preserve IDs (1:1 Direct Database Primary Key Mapping)',
+    'SEO_MIGRATION_PRESERVE_IDS_EXPLAIN'    => 'Only enable this if you know your old platform\'s numeric IDs were preserved identically 1:1 into phpBB (e.g. through a direct database import that retained primary keys). When disabled (default), numeric IDs that have no entry in phpbb_migration_id_map return a safe 404 instead of blindly redirecting to an unrelated topic or post.',
+    'SEO_MIGRATION_NO_MAP_WARNING'          => 'Notice: Cross-Platform Migration redirects are enabled, but no phpbb_migration_id_map table was found and "Preserve IDs" is OFF. Legacy links with foreign numeric IDs will return 404 until mapping data is provided or "Preserve IDs" is enabled.',
 ]);
+
+
 

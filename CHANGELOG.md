@@ -5,7 +5,29 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-09-13
+
+### Fixed (Emergency Security & Migration Engine Hardening)
+- **Route Collision Protection & Fail-Closed Guard (`MigrationRedirector`)**:
+  - Injected Symfony `@router` into `MigrationRedirector` and implemented `isRegisteredRoute()` check to prevent legacy platform patterns from inadvertently hijacking active routes registered by phpBB core or third-party extensions.
+  - Fail-closed exception handling: any router exception (`MethodNotAllowedException` or `\Throwable`) immediately yields to the native handler.
+- **Default-OFF Isolation & Master ACP Toggles**:
+  - `MigrationRedirector` is now disabled by default (`seo_migration_redirect_enabled = 0`) to eliminate per-request overhead and avoid accidental route matching on non-migrated boards.
+  - Added individual ACP toggles for source platforms (`XenForo`, `vBulletin`, `MyBB`, `SMF`) so boards only evaluate URL patterns for platforms they actually migrated from.
+- **Safe 404 Fallback Guard (`seo_migration_preserve_ids`)**:
+  - Eliminated dangerous wrong-topic redirects when mapping data is missing: `resolveTargetId()` now returns `null` (safe 404) unless `seo_migration_preserve_ids` is explicitly enabled by the administrator.
+  - Added warning banner in the ACP Permalinks module when migration redirects are enabled without a mapping table or preserved IDs.
+- **Strict Host Trust Validation in RequestContextFactory**:
+  - Fixed a domain comparison flaw where `observedHost` was compared against itself rather than the board's configured domain, strictly closing open-redirect vectors and enforcing configured domain / subdomain boundaries.
+- **Safe Fallback for Incomplete Bootstrap**:
+  - Replaced direct `append_sid()` calls with a defensive helper that safely falls back to standard parameter construction if phpBB common functions are not yet loaded.
+- **Pattern Tightening**:
+  - Constrained XenForo and vBulletin legacy patterns to strictly enforce positive integer IDs (`id > 0`) and exact dot/delimiter separators.
+
+---
+
 ## [1.2.0] - 2026-09-12
+
 
 ### Added
 - **Automated Zero-Drop Migration Redirection Engine (`MigrationRedirector`)**:

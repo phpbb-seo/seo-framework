@@ -123,10 +123,11 @@
 					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
 					<span class="pseo-preview-url" id="preview_group">{PREVIEW_GROUP}</span>
 				</div>
-			</div>
 		</div>
 	<!-- Legacy Migration Card -->
 	<div class="pseo-card">
+
+
 		<div class="pseo-card-header">
 			<h2 class="pseo-card-title">{L_SEO_LEGACY_MIGRATION_TITLE}</h2>
 			<span class="pseo-badge pseo-badge--neutral">USU / Legacy</span>
@@ -143,6 +144,70 @@
 				<label style="display: flex; align-items: flex-start; gap: 8px; font-weight: 500; cursor: pointer;">
 					<input type="checkbox" id="legacy_usu_enabled" name="legacy_usu_enabled" value="1" style="margin-top: 3px;"<!-- IF S_LEGACY_USU_ENABLED --> checked="checked"<!-- ENDIF --> />
 					<span style="font-size: 13px; color: #475569; line-height: 1.4;">{L_SEO_LEGACY_USU_ENABLE_EXPLAIN}</span>
+				</label>
+			</div>
+		</div>
+	</div>
+
+	<!-- Cross-Platform Migration Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_MIGRATION_REDIRECT_TITLE}</h2>
+			<span class="pseo-badge pseo-badge--neutral">XenForo / vB / MyBB / SMF</span>
+		</div>
+		<div class="pseo-card-body">
+			<!-- IF S_MIGRATION_NO_MAP_WARNING -->
+			<div class="pseo-notice pseo-notice--warning" style="margin-bottom: 14px; background: #fef2f2; border-color: #fca5a5; color: #991b1b;">
+				<span class="pseo-notice-icon">⚠️</span>
+				<span>{L_SEO_MIGRATION_NO_MAP_WARNING}</span>
+			</div>
+			<!-- ENDIF -->
+			<div class="pseo-notice pseo-notice--warning" style="margin-bottom: 14px;">
+				<span class="pseo-notice-icon">⚠️</span>
+				<span>{L_SEO_MIGRATION_REDIRECT_WARNING}</span>
+			</div>
+			<div class="pseo-field" style="margin-bottom: 16px;">
+				<label class="pseo-label" for="migration_redirect_enabled">
+					<span>{L_SEO_MIGRATION_REDIRECT_ENABLE}</span>
+				</label>
+				<label style="display: flex; align-items: flex-start; gap: 8px; font-weight: 500; cursor: pointer;">
+					<input type="checkbox" id="migration_redirect_enabled" name="migration_redirect_enabled" value="1" style="margin-top: 3px;"<!-- IF S_MIGRATION_REDIRECT_ENABLED --> checked="checked"<!-- ENDIF --> />
+					<span style="font-size: 13px; color: #475569; line-height: 1.4;">{L_SEO_MIGRATION_REDIRECT_ENABLE_EXPLAIN}</span>
+				</label>
+			</div>
+
+			<div class="pseo-field" style="margin-bottom: 16px;">
+				<label class="pseo-label">
+					<span>{L_SEO_MIGRATION_PLATFORMS}</span>
+				</label>
+				<p style="font-size: 12px; color: #64748b; margin-bottom: 8px;">{L_SEO_MIGRATION_PLATFORMS_EXPLAIN}</p>
+				<div style="display: flex; flex-direction: column; gap: 6px;">
+					<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+						<input type="checkbox" name="migration_platform_xenforo" value="1"<!-- IF S_MIGRATION_XENFORO --> checked="checked"<!-- ENDIF --> />
+						<span>{L_SEO_MIGRATION_PLATFORM_XENFORO}</span>
+					</label>
+					<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+						<input type="checkbox" name="migration_platform_vbulletin" value="1"<!-- IF S_MIGRATION_VBULLETIN --> checked="checked"<!-- ENDIF --> />
+						<span>{L_SEO_MIGRATION_PLATFORM_VBULLETIN}</span>
+					</label>
+					<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+						<input type="checkbox" name="migration_platform_mybb" value="1"<!-- IF S_MIGRATION_MYBB --> checked="checked"<!-- ENDIF --> />
+						<span>{L_SEO_MIGRATION_PLATFORM_MYBB}</span>
+					</label>
+					<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+						<input type="checkbox" name="migration_platform_smf" value="1"<!-- IF S_MIGRATION_SMF --> checked="checked"<!-- ENDIF --> />
+						<span>{L_SEO_MIGRATION_PLATFORM_SMF}</span>
+					</label>
+				</div>
+			</div>
+
+			<div class="pseo-field">
+				<label class="pseo-label" for="migration_preserve_ids">
+					<span>{L_SEO_MIGRATION_PRESERVE_IDS}</span>
+				</label>
+				<label style="display: flex; align-items: flex-start; gap: 8px; font-weight: 500; cursor: pointer;">
+					<input type="checkbox" id="migration_preserve_ids" name="migration_preserve_ids" value="1" style="margin-top: 3px;"<!-- IF S_MIGRATION_PRESERVE_IDS --> checked="checked"<!-- ENDIF --> />
+					<span style="font-size: 13px; color: #475569; line-height: 1.4;">{L_SEO_MIGRATION_PRESERVE_IDS_EXPLAIN}</span>
 				</label>
 			</div>
 		</div>

@@ -161,7 +161,26 @@ class main_module
                 $patternTopic  = '/' . ltrim($patternTopic, '/');
                 $patternMember = '/' . ltrim($patternMember, '/');
                 $patternGroup  = '/' . ltrim($patternGroup, '/');
-                $legacyUsu     = $request->variable('legacy_usu_enabled', 0) ? 1 : 0;
+                $legacyUsu          = $request->variable('legacy_usu_enabled', 0) ? 1 : 0;
+                $migrationRedirect  = $request->variable('migration_redirect_enabled', 0) ? 1 : 0;
+                $migrationPreserve  = $request->variable('migration_preserve_ids', 0) ? 1 : 0;
+
+
+
+                $selPlatforms = [];
+                if ($request->variable('migration_platform_xenforo', 0)) {
+                    $selPlatforms[] = 'xenforo';
+                }
+                if ($request->variable('migration_platform_vbulletin', 0)) {
+                    $selPlatforms[] = 'vbulletin';
+                }
+                if ($request->variable('migration_platform_mybb', 0)) {
+                    $selPlatforms[] = 'mybb';
+                }
+                if ($request->variable('migration_platform_smf', 0)) {
+                    $selPlatforms[] = 'smf';
+                }
+                $migrationPlatformsStr = !empty($selPlatforms) ? implode(',', $selPlatforms) : 'xenforo,vbulletin,mybb,smf';
 
                 // Derive pagination patterns consistently
                 $patternForumPage = rtrim($patternForum, '/') . '/page-{page}/';
@@ -189,18 +208,23 @@ class main_module
 
                     // Snapshot old config values for complete rollback safety
                     $oldConfigValues = [
-                        'seo_permalink_preset'        => (string) ($config['seo_permalink_preset'] ?? 'modern'),
-                        'phpbbseo_legacy_usu_enabled' => (string) ($config['phpbbseo_legacy_usu_enabled'] ?? '0'),
-                        'seo_pattern_forum'           => (string) ($config['seo_pattern_forum'] ?? '/forum/{slug}-{id}/'),
-                        'seo_pattern_forum_page'      => (string) ($config['seo_pattern_forum_page'] ?? '/forum/{slug}-{id}/page-{page}/'),
-                        'seo_pattern_topic'           => (string) ($config['seo_pattern_topic'] ?? '/topic/{slug}-{id}/'),
-                        'seo_pattern_topic_page'      => (string) ($config['seo_pattern_topic_page'] ?? '/topic/{slug}-{id}/page-{page}/'),
-                        'seo_pattern_member'          => (string) ($config['seo_pattern_member'] ?? '/member/{slug}-{id}/'),
-                        'seo_pattern_group'           => (string) ($config['seo_pattern_group'] ?? '/group/{slug}-{id}/'),
-                        'seo_prev_pattern_forum'      => (string) ($config['seo_prev_pattern_forum'] ?? '/forum/{slug}-{id}/'),
-                        'seo_prev_pattern_topic'      => (string) ($config['seo_prev_pattern_topic'] ?? '/topic/{slug}-{id}/'),
-                        'seo_prev_pattern_member'     => (string) ($config['seo_prev_pattern_member'] ?? '/member/{slug}-{id}/'),
-                        'seo_prev_pattern_group'      => (string) ($config['seo_prev_pattern_group'] ?? '/group/{slug}-{id}/'),
+                        'seo_permalink_preset'           => (string) ($config['seo_permalink_preset'] ?? 'modern'),
+                        'phpbbseo_legacy_usu_enabled'    => (string) ($config['phpbbseo_legacy_usu_enabled'] ?? '0'),
+                        'seo_migration_redirect_enabled' => (string) ($config['seo_migration_redirect_enabled'] ?? '0'),
+
+
+                        'seo_migration_preserve_ids'     => (string) ($config['seo_migration_preserve_ids'] ?? '0'),
+                        'seo_migration_platforms'        => (string) ($config['seo_migration_platforms'] ?? 'xenforo,vbulletin,mybb,smf'),
+                        'seo_pattern_forum'              => (string) ($config['seo_pattern_forum'] ?? '/forum/{slug}-{id}/'),
+                        'seo_pattern_forum_page'         => (string) ($config['seo_pattern_forum_page'] ?? '/forum/{slug}-{id}/page-{page}/'),
+                        'seo_pattern_topic'              => (string) ($config['seo_pattern_topic'] ?? '/topic/{slug}-{id}/'),
+                        'seo_pattern_topic_page'         => (string) ($config['seo_pattern_topic_page'] ?? '/topic/{slug}-{id}/page-{page}/'),
+                        'seo_pattern_member'             => (string) ($config['seo_pattern_member'] ?? '/member/{slug}-{id}/'),
+                        'seo_pattern_group'              => (string) ($config['seo_pattern_group'] ?? '/group/{slug}-{id}/'),
+                        'seo_prev_pattern_forum'         => (string) ($config['seo_prev_pattern_forum'] ?? '/forum/{slug}-{id}/'),
+                        'seo_prev_pattern_topic'         => (string) ($config['seo_prev_pattern_topic'] ?? '/topic/{slug}-{id}/'),
+                        'seo_prev_pattern_member'        => (string) ($config['seo_prev_pattern_member'] ?? '/member/{slug}-{id}/'),
+                        'seo_prev_pattern_group'         => (string) ($config['seo_prev_pattern_group'] ?? '/group/{slug}-{id}/'),
                     ];
 
                     $prevPatterns = [
@@ -226,6 +250,11 @@ class main_module
 
                         $config->set('seo_permalink_preset', 'custom');
                         $config->set('phpbbseo_legacy_usu_enabled', (string) $legacyUsu);
+                        $config->set('seo_migration_redirect_enabled', (string) $migrationRedirect);
+
+
+                        $config->set('seo_migration_preserve_ids', (string) $migrationPreserve);
+                        $config->set('seo_migration_platforms', $migrationPlatformsStr);
                         $config->set('seo_pattern_forum', $patternForum);
                         $config->set('seo_pattern_forum_page', $patternForumPage);
                         $config->set('seo_pattern_topic', $patternTopic);
@@ -262,21 +291,48 @@ class main_module
         $previewMember = $this->generatePreview($patternCompiler, $curMember, 'example-user', 27);
         $previewGroup  = $this->generatePreview($patternCompiler, $curGroup, 'example-group', 5);
 
+        // Check if migration_id_map table exists
+        $hasMigrationMapTable = false;
+        try {
+            $db = $container->get('dbal.conn');
+            $tablePrefix = $container->getParameter('core.table_prefix');
+            $sql = 'SELECT 1 FROM ' . $tablePrefix . 'migration_id_map';
+            $r = $db->sql_query_limit($sql, 1);
+            $db->sql_freeresult($r);
+            $hasMigrationMapTable = true;
+        } catch (\Throwable) {
+            $hasMigrationMapTable = false;
+        }
+
+        $migrationEnabled = (bool) ($config['seo_migration_redirect_enabled'] ?? false);
+        $preserveIds      = (bool) ($config['seo_migration_preserve_ids'] ?? false);
+        $curPlatformsRaw  = (string) ($config['seo_migration_platforms'] ?? 'xenforo,vbulletin,mybb,smf');
+        $curPlatforms     = array_filter(array_map('trim', explode(',', strtolower($curPlatformsRaw))));
+
         $template->assign_vars([
-            'TOKEN_SLUG'      => '{slug}',
-            'TOKEN_ID'        => '{id}',
-            'PATTERN_FORUM'   => $curForum,
-            'PATTERN_TOPIC'   => $curTopic,
-            'PATTERN_MEMBER'  => $curMember,
-            'PATTERN_GROUP'   => $curGroup,
-            'PREVIEW_FORUM'   => $previewForum,
-            'PREVIEW_TOPIC'        => $previewTopic,
-            'PREVIEW_MEMBER'       => $previewMember,
-            'PREVIEW_GROUP'        => $previewGroup,
-            'S_LEGACY_USU_ENABLED' => (bool) ($config['phpbbseo_legacy_usu_enabled'] ?? false),
-            'S_ERROR'              => !empty($errors),
-            'ERROR_MSG'            => implode('<br>', $errors),
-            'U_ACTION'             => $this->u_action,
+            'TOKEN_SLUG'                   => '{slug}',
+            'TOKEN_ID'                     => '{id}',
+            'PATTERN_FORUM'                => $curForum,
+            'PATTERN_TOPIC'                => $curTopic,
+            'PATTERN_MEMBER'               => $curMember,
+            'PATTERN_GROUP'                => $curGroup,
+            'PREVIEW_FORUM'                => $previewForum,
+            'PREVIEW_TOPIC'                => $previewTopic,
+            'PREVIEW_MEMBER'               => $previewMember,
+            'PREVIEW_GROUP'                => $previewGroup,
+            'S_LEGACY_USU_ENABLED'         => (bool) ($config['phpbbseo_legacy_usu_enabled'] ?? false),
+
+
+            'S_MIGRATION_REDIRECT_ENABLED' => $migrationEnabled,
+            'S_MIGRATION_PRESERVE_IDS'     => $preserveIds,
+            'S_MIGRATION_XENFORO'          => in_array('xenforo', $curPlatforms, true),
+            'S_MIGRATION_VBULLETIN'        => in_array('vbulletin', $curPlatforms, true),
+            'S_MIGRATION_MYBB'             => in_array('mybb', $curPlatforms, true),
+            'S_MIGRATION_SMF'              => in_array('smf', $curPlatforms, true),
+            'S_MIGRATION_NO_MAP_WARNING'   => $migrationEnabled && !$hasMigrationMapTable && !$preserveIds,
+            'S_ERROR'                      => !empty($errors),
+            'ERROR_MSG'                    => implode('<br>', $errors),
+            'U_ACTION'                     => $this->u_action,
         ]);
     }
 

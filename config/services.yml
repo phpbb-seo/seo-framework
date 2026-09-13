@@ -53,6 +53,8 @@ services:
     phpbbseo.framework.url.slug_generator:
         class: phpbbseo\framework\Url\DefaultSlugGenerator
 
+
+
     phpbbseo.framework.rewrite.permalink_profile:
         class: phpbbseo\framework\Rewrite\PermalinkRewriteProfile
         arguments:
@@ -142,6 +144,7 @@ services:
             - '%core.table_prefix%'
             - '%core.root_path%'
             - '%core.php_ext%'
+            - '@router'
         tags:
             - { name: event.listener }
 

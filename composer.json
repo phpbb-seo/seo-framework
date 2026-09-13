@@ -3,8 +3,9 @@
     "type": "phpbb-extension",
     "description": "Modern SEO extension for phpBB with SEO-friendly URLs, canonical URLs, titles & meta, XML sitemaps and multilingual support.",
     "homepage": "https://www.phpbbseo.com/",
-    "version": "1.2.0",
-    "time": "2026-09-12",
+    "version": "1.2.1",
+    "time": "2026-09-13",
+
     "license": "GPL-2.0-only",
     "authors": [
         {

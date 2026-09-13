@@ -70,13 +70,15 @@ class RequestContextFactory
 
         // Strip port for domain matching
         $obsDomain = \phpbbseo\framework\Redirect\UrlSafetyValidator::extractDomain($observedHost);
+        $confHost = $this->getConfiguredHost();
+        $confDomain = \phpbbseo\framework\Redirect\UrlSafetyValidator::extractDomain($confHost);
 
         $validator = $this->validator ?? new \phpbbseo\framework\Redirect\UrlSafetyValidator($this->configProvider);
-        if ($validator->isHostTrusted($obsDomain, $obsDomain)) {
+        if ($validator->isHostTrusted($obsDomain, $confDomain)) {
             return $observedHost;
         }
 
-        return $this->getConfiguredHost();
+        return $confHost;
     }
 
     private function getConfiguredHost(): string

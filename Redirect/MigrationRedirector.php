@@ -11,6 +11,9 @@ use phpbbseo\framework\Context\EntitySeoContext;
 use phpbbseo\framework\Rewrite\PublicResourceUrlResolver;
 use phpbbseo\framework\Rewrite\SlugRepository;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\Routing\Exception\MethodNotAllowedException;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
+use Symfony\Component\Routing\RouterInterface;
 
 /**
  * Migration 301 Permanent Redirector
@@ -36,7 +39,8 @@ class MigrationRedirector implements EventSubscriberInterface
         private readonly EntitySeoContext $entityContext,
         private readonly string $tablePrefix,
         private readonly string $rootPath,
-        private readonly string $phpExt
+        private readonly string $phpExt,
+        private readonly ?RouterInterface $router = null
     ) {}
 
     public static function getSubscribedEvents(): array
@@ -46,12 +50,84 @@ class MigrationRedirector implements EventSubscriberInterface
         ];
     }
 
+    public function isEnabled(): bool
+    {
+        return $this->configProvider->isMigrationRedirectEnabled();
+    }
+
+    public function isPlatformEnabled(string $platform): bool
+    {
+        return $this->configProvider->isMigrationPlatformEnabled($platform);
+    }
+
+    /**
+     * Checks whether an inbound path matches an existing registered Symfony controller route.
+     * Prevents legacy migration patterns from shadowing or hijacking native core or extension routes.
+     */
+    public function isRegisteredRoute(string $path): bool
+    {
+        if ($this->router === null) {
+            return false;
+        }
+
+        // Strip query string if present
+        $qPos = strpos($path, '?');
+        if ($qPos !== false) {
+            $path = substr($path, 0, $qPos);
+        }
+
+        $cleanPath = '/' . ltrim($path, '/');
+        $scriptPath = rtrim((string) $this->configProvider->get('script_path', '/'), '/');
+
+        $candidates = [];
+        if ($scriptPath !== '' && str_starts_with($cleanPath, $scriptPath . '/')) {
+            $candidates[] = substr($cleanPath, strlen($scriptPath));
+        }
+        $candidates[] = $cleanPath;
+
+        $testPaths = [];
+        foreach ($candidates as $candidate) {
+            $testPaths[] = $candidate;
+            $trimmed = rtrim($candidate, '/');
+            if ($trimmed !== '' && $trimmed !== $candidate) {
+                $testPaths[] = $trimmed;
+            }
+        }
+        $testPaths = array_unique($testPaths);
+
+        foreach ($testPaths as $candidate) {
+            try {
+                $match = $this->router->match($candidate);
+                if (!empty($match)) {
+                    return true;
+                }
+            } catch (MethodNotAllowedException) {
+                // Route is registered, though method does not match
+                return true;
+            } catch (ResourceNotFoundException) {
+                // Definitively not matched for this candidate; try remaining candidates
+                continue;
+            } catch (\Throwable) {
+                // Fail-safe (fail-closed toward NOT redirecting): An unexpected router error
+                // means we cannot guarantee this path does not belong to a controller route.
+                // Erring on the side of not redirecting prevents hijacking another extension's route.
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Intercept request early in phpBB lifecycle before heavy rendering
      */
     public function onCommon($event): void
     {
         if (defined('ADMIN_START') || defined('IN_ADMIN')) {
+            return;
+        }
+
+        if (!$this->isEnabled()) {
             return;
         }
 
@@ -78,127 +154,157 @@ class MigrationRedirector implements EventSubscriberInterface
      */
     public function detectLegacyRequest(): ?array
     {
+        if (!$this->isEnabled()) {
+            return null;
+        }
+
         $rawUri = (string) $this->request->server('REQUEST_URI', '');
         $rawQuery = (string) $this->request->server('QUERY_STRING', '');
         $scriptName = strtolower(basename((string) $this->request->server('SCRIPT_NAME', '')));
 
+        $match = $this->matchLegacyPatterns($rawUri, $rawQuery, $scriptName);
+        if ($match === null) {
+            return null;
+        }
+
+        // Before claiming ANY matched pattern, verify against Symfony router!
+        if ($this->isRegisteredRoute($rawUri)) {
+            return null;
+        }
+
+        return $match;
+    }
+
+    /**
+     * Evaluates URL against enabled legacy forum platform patterns
+     */
+    public function matchLegacyPatterns(string $rawUri, string $rawQuery, string $scriptName): ?array
+    {
         // ---------------------------------------------------------------------
         // 1. Explicit Webserver Query Parameters (from .htaccess / Nginx rewrite)
         // ---------------------------------------------------------------------
 
         // XenForo query params
-        if ($this->request->is_set('threads')) {
-            $val = (string) $this->request->variable('threads', '');
-            $parsed = $this->parseIdAndPage($val);
-            if ($parsed !== null) {
-                $page = max(1, (int) $this->request->variable('page', 1));
-                if ($page > 1 && $parsed['page'] === 1) {
-                    $parsed['page'] = $page;
+        if ($this->isPlatformEnabled('xenforo')) {
+            if ($this->request->is_set('threads')) {
+                $val = (string) $this->request->variable('threads', '');
+                $parsed = $this->parseIdAndPage($val);
+                if ($parsed !== null) {
+                    $page = max(1, (int) $this->request->variable('page', 1));
+                    if ($page > 1 && $parsed['page'] === 1) {
+                        $parsed['page'] = $page;
+                    }
+                    return ['type' => 'topic', 'id' => $parsed['id'], 'page' => $parsed['page'], 'system' => 'xenforo'];
                 }
-                return ['type' => 'topic', 'id' => $parsed['id'], 'page' => $parsed['page'], 'system' => 'xenforo'];
             }
-        }
-        if ($this->request->is_set('posts')) {
-            $val = (int) $this->request->variable('posts', 0);
-            if ($val > 0) {
-                return ['type' => 'post', 'id' => $val, 'system' => 'xenforo'];
-            }
-        }
-        if ($this->request->is_set('forums')) {
-            $val = (string) $this->request->variable('forums', '');
-            $parsed = $this->parseIdAndPage($val);
-            if ($parsed !== null) {
-                $page = max(1, (int) $this->request->variable('page', 1));
-                if ($page > 1 && $parsed['page'] === 1) {
-                    $parsed['page'] = $page;
+            if ($this->request->is_set('posts')) {
+                $val = (int) $this->request->variable('posts', 0);
+                if ($val > 0) {
+                    return ['type' => 'post', 'id' => $val, 'system' => 'xenforo'];
                 }
-                return ['type' => 'forum', 'id' => $parsed['id'], 'page' => $parsed['page'], 'system' => 'xenforo'];
             }
-        }
-        if ($this->request->is_set('members')) {
-            $val = (string) $this->request->variable('members', '');
-            $parsed = $this->parseIdAndPage($val);
-            if ($parsed !== null) {
-                return ['type' => 'user', 'id' => $parsed['id'], 'system' => 'xenforo'];
+            if ($this->request->is_set('forums')) {
+                $val = (string) $this->request->variable('forums', '');
+                $parsed = $this->parseIdAndPage($val);
+                if ($parsed !== null) {
+                    $page = max(1, (int) $this->request->variable('page', 1));
+                    if ($page > 1 && $parsed['page'] === 1) {
+                        $parsed['page'] = $page;
+                    }
+                    return ['type' => 'forum', 'id' => $parsed['id'], 'page' => $parsed['page'], 'system' => 'xenforo'];
+                }
+            }
+            if ($this->request->is_set('members')) {
+                $val = (string) $this->request->variable('members', '');
+                $parsed = $this->parseIdAndPage($val);
+                if ($parsed !== null) {
+                    return ['type' => 'user', 'id' => $parsed['id'], 'system' => 'xenforo'];
+                }
             }
         }
 
         // vBulletin webserver query params
-        if ($this->request->is_set('vb_thread_id')) {
-            $id = (int) $this->request->variable('vb_thread_id', 0);
-            if ($id > 0) {
-                $page = (int) $this->request->variable('page', 1);
-                return ['type' => 'topic', 'id' => $id, 'page' => max(1, $page), 'system' => 'vbulletin'];
+        if ($this->isPlatformEnabled('vbulletin')) {
+            if ($this->request->is_set('vb_thread_id')) {
+                $id = (int) $this->request->variable('vb_thread_id', 0);
+                if ($id > 0) {
+                    $page = (int) $this->request->variable('page', 1);
+                    return ['type' => 'topic', 'id' => $id, 'page' => max(1, $page), 'system' => 'vbulletin'];
+                }
             }
-        }
-        if ($this->request->is_set('vb_post_id')) {
-            $id = (int) $this->request->variable('vb_post_id', 0);
-            if ($id > 0) {
-                return ['type' => 'post', 'id' => $id, 'system' => 'vbulletin'];
+            if ($this->request->is_set('vb_post_id')) {
+                $id = (int) $this->request->variable('vb_post_id', 0);
+                if ($id > 0) {
+                    return ['type' => 'post', 'id' => $id, 'system' => 'vbulletin'];
+                }
             }
-        }
-        if ($this->request->is_set('vb_forum_id')) {
-            $id = (int) $this->request->variable('vb_forum_id', 0);
-            if ($id > 0) {
-                $page = (int) $this->request->variable('page', 1);
-                return ['type' => 'forum', 'id' => $id, 'page' => max(1, $page), 'system' => 'vbulletin'];
+            if ($this->request->is_set('vb_forum_id')) {
+                $id = (int) $this->request->variable('vb_forum_id', 0);
+                if ($id > 0) {
+                    $page = (int) $this->request->variable('page', 1);
+                    return ['type' => 'forum', 'id' => $id, 'page' => max(1, $page), 'system' => 'vbulletin'];
+                }
             }
-        }
-        if ($this->request->is_set('vb_user_id')) {
-            $id = (int) $this->request->variable('vb_user_id', 0);
-            if ($id > 0) {
-                return ['type' => 'user', 'id' => $id, 'system' => 'vbulletin'];
+            if ($this->request->is_set('vb_user_id')) {
+                $id = (int) $this->request->variable('vb_user_id', 0);
+                if ($id > 0) {
+                    return ['type' => 'user', 'id' => $id, 'system' => 'vbulletin'];
+                }
             }
         }
 
         // MyBB webserver query params
-        if ($this->request->is_set('mybb_tid')) {
-            $id = (int) $this->request->variable('mybb_tid', 0);
-            if ($id > 0) {
-                $page = (int) $this->request->variable('page', 1);
-                return ['type' => 'topic', 'id' => $id, 'page' => max(1, $page), 'system' => 'mybb'];
+        if ($this->isPlatformEnabled('mybb')) {
+            if ($this->request->is_set('mybb_tid')) {
+                $id = (int) $this->request->variable('mybb_tid', 0);
+                if ($id > 0) {
+                    $page = (int) $this->request->variable('page', 1);
+                    return ['type' => 'topic', 'id' => $id, 'page' => max(1, $page), 'system' => 'mybb'];
+                }
             }
-        }
-        if ($this->request->is_set('mybb_pid')) {
-            $id = (int) $this->request->variable('mybb_pid', 0);
-            if ($id > 0) {
-                return ['type' => 'post', 'id' => $id, 'system' => 'mybb'];
+            if ($this->request->is_set('mybb_pid')) {
+                $id = (int) $this->request->variable('mybb_pid', 0);
+                if ($id > 0) {
+                    return ['type' => 'post', 'id' => $id, 'system' => 'mybb'];
+                }
             }
-        }
-        if ($this->request->is_set('mybb_fid')) {
-            $id = (int) $this->request->variable('mybb_fid', 0);
-            if ($id > 0) {
-                $page = (int) $this->request->variable('page', 1);
-                return ['type' => 'forum', 'id' => $id, 'page' => max(1, $page), 'system' => 'mybb'];
+            if ($this->request->is_set('mybb_fid')) {
+                $id = (int) $this->request->variable('mybb_fid', 0);
+                if ($id > 0) {
+                    $page = (int) $this->request->variable('page', 1);
+                    return ['type' => 'forum', 'id' => $id, 'page' => max(1, $page), 'system' => 'mybb'];
+                }
             }
-        }
-        if ($this->request->is_set('mybb_uid')) {
-            $id = (int) $this->request->variable('mybb_uid', 0);
-            if ($id > 0) {
-                return ['type' => 'user', 'id' => $id, 'system' => 'mybb'];
+            if ($this->request->is_set('mybb_uid')) {
+                $id = (int) $this->request->variable('mybb_uid', 0);
+                if ($id > 0) {
+                    return ['type' => 'user', 'id' => $id, 'system' => 'mybb'];
+                }
             }
         }
 
         // SMF webserver query params
-        if ($this->request->is_set('smf_topic')) {
-            $val = (string) $this->request->variable('smf_topic', '');
-            if (preg_match('/^(\d+)\.msg(\d+)$/i', $val, $m)) {
-                return ['type' => 'post', 'id' => (int) $m[2], 'system' => 'smf'];
+        if ($this->isPlatformEnabled('smf')) {
+            if ($this->request->is_set('smf_topic')) {
+                $val = (string) $this->request->variable('smf_topic', '');
+                if (preg_match('/^(\d+)\.msg(\d+)$/i', $val, $m)) {
+                    return ['type' => 'post', 'id' => (int) $m[2], 'system' => 'smf'];
+                }
+                if (preg_match('/^(\d+)(?:\.(\d+))?$/', $val, $m)) {
+                    return ['type' => 'topic', 'id' => (int) $m[1], 'offset' => (int) ($m[2] ?? 0), 'system' => 'smf'];
+                }
             }
-            if (preg_match('/^(\d+)(?:\.(\d+))?$/', $val, $m)) {
-                return ['type' => 'topic', 'id' => (int) $m[1], 'offset' => (int) ($m[2] ?? 0), 'system' => 'smf'];
+            if ($this->request->is_set('smf_board')) {
+                $val = (string) $this->request->variable('smf_board', '');
+                if (preg_match('/^(\d+)(?:\.(\d+))?$/', $val, $m)) {
+                    return ['type' => 'forum', 'id' => (int) $m[1], 'offset' => (int) ($m[2] ?? 0), 'system' => 'smf'];
+                }
             }
-        }
-        if ($this->request->is_set('smf_board')) {
-            $val = (string) $this->request->variable('smf_board', '');
-            if (preg_match('/^(\d+)(?:\.(\d+))?$/', $val, $m)) {
-                return ['type' => 'forum', 'id' => (int) $m[1], 'offset' => (int) ($m[2] ?? 0), 'system' => 'smf'];
-            }
-        }
-        if ($this->request->is_set('smf_user')) {
-            $id = (int) $this->request->variable('smf_user', 0);
-            if ($id > 0) {
-                return ['type' => 'user', 'id' => $id, 'system' => 'smf'];
+            if ($this->request->is_set('smf_user')) {
+                $id = (int) $this->request->variable('smf_user', 0);
+                if ($id > 0) {
+                    return ['type' => 'user', 'id' => $id, 'system' => 'smf'];
+                }
             }
         }
 
@@ -206,53 +312,55 @@ class MigrationRedirector implements EventSubscriberInterface
         // 2. Direct Legacy Script Files (e.g. showthread.php, forumdisplay.php)
         // ---------------------------------------------------------------------
 
-        if ($scriptName === 'showthread.php' || str_contains($rawUri, 'showthread.php')) {
-            $page = max(1, (int) $this->request->variable('page', 1));
-            // Post ID in showthread
-            $pid = (int) ($this->request->variable('p', 0) ?: $this->request->variable('postid', 0) ?: $this->request->variable('pid', 0));
-            if ($pid > 0) {
-                return ['type' => 'post', 'id' => $pid, 'system' => 'vbulletin'];
+        if ($this->isPlatformEnabled('vbulletin')) {
+            if ($scriptName === 'showthread.php' || str_contains($rawUri, 'showthread.php')) {
+                $page = max(1, (int) $this->request->variable('page', 1));
+                // Post ID in showthread
+                $pid = (int) ($this->request->variable('p', 0) ?: $this->request->variable('postid', 0) ?: $this->request->variable('pid', 0));
+                if ($pid > 0) {
+                    return ['type' => 'post', 'id' => $pid, 'system' => 'vbulletin'];
+                }
+                // Topic ID in showthread
+                $tid = (int) ($this->request->variable('t', 0) ?: $this->request->variable('threadid', 0) ?: $this->request->variable('tid', 0));
+                if ($tid > 0) {
+                    return ['type' => 'topic', 'id' => $tid, 'page' => $page, 'system' => 'vbulletin'];
+                }
+                // vB format: showthread.php?12345-Thread-Title
+                if (preg_match('/^(\d+)(?:-[^&]*)?/i', $rawQuery, $m)) {
+                    return ['type' => 'topic', 'id' => (int) $m[1], 'page' => $page, 'system' => 'vbulletin'];
+                }
             }
-            // Topic ID in showthread
-            $tid = (int) ($this->request->variable('t', 0) ?: $this->request->variable('threadid', 0) ?: $this->request->variable('tid', 0));
-            if ($tid > 0) {
-                return ['type' => 'topic', 'id' => $tid, 'page' => $page, 'system' => 'vbulletin'];
-            }
-            // vB format: showthread.php?12345-Thread-Title
-            if (preg_match('/^(\d+)(?:-[^&]*)?/i', $rawQuery, $m)) {
-                return ['type' => 'topic', 'id' => (int) $m[1], 'page' => $page, 'system' => 'vbulletin'];
-            }
-        }
 
-        if ($scriptName === 'showpost.php' || str_contains($rawUri, 'showpost.php')) {
-            $pid = (int) ($this->request->variable('p', 0) ?: $this->request->variable('postid', 0) ?: $this->request->variable('pid', 0));
-            if ($pid > 0) {
-                return ['type' => 'post', 'id' => $pid, 'system' => 'vbulletin'];
+            if ($scriptName === 'showpost.php' || str_contains($rawUri, 'showpost.php')) {
+                $pid = (int) ($this->request->variable('p', 0) ?: $this->request->variable('postid', 0) ?: $this->request->variable('pid', 0));
+                if ($pid > 0) {
+                    return ['type' => 'post', 'id' => $pid, 'system' => 'vbulletin'];
+                }
+                if (preg_match('/^(\d+)/i', $rawQuery, $m)) {
+                    return ['type' => 'post', 'id' => (int) $m[1], 'system' => 'vbulletin'];
+                }
             }
-            if (preg_match('/^(\d+)/i', $rawQuery, $m)) {
-                return ['type' => 'post', 'id' => (int) $m[1], 'system' => 'vbulletin'];
-            }
-        }
 
-        if ($scriptName === 'forumdisplay.php' || str_contains($rawUri, 'forumdisplay.php')) {
-            $page = max(1, (int) $this->request->variable('page', 1));
-            $fid = (int) ($this->request->variable('f', 0) ?: $this->request->variable('forumid', 0) ?: $this->request->variable('fid', 0));
-            if ($fid > 0) {
-                return ['type' => 'forum', 'id' => $fid, 'page' => $page, 'system' => 'vbulletin'];
+            if ($scriptName === 'forumdisplay.php' || str_contains($rawUri, 'forumdisplay.php')) {
+                $page = max(1, (int) $this->request->variable('page', 1));
+                $fid = (int) ($this->request->variable('f', 0) ?: $this->request->variable('forumid', 0) ?: $this->request->variable('fid', 0));
+                if ($fid > 0) {
+                    return ['type' => 'forum', 'id' => $fid, 'page' => $page, 'system' => 'vbulletin'];
+                }
+                // vB format: forumdisplay.php?12-Forum-Title
+                if (preg_match('/^(\d+)(?:-[^&]*)?/i', $rawQuery, $m)) {
+                    return ['type' => 'forum', 'id' => (int) $m[1], 'page' => $page, 'system' => 'vbulletin'];
+                }
             }
-            // vB format: forumdisplay.php?12-Forum-Title
-            if (preg_match('/^(\d+)(?:-[^&]*)?/i', $rawQuery, $m)) {
-                return ['type' => 'forum', 'id' => (int) $m[1], 'page' => $page, 'system' => 'vbulletin'];
-            }
-        }
 
-        if ($scriptName === 'member.php' || str_contains($rawUri, 'member.php')) {
-            $uid = (int) ($this->request->variable('u', 0) ?: $this->request->variable('userid', 0) ?: $this->request->variable('uid', 0));
-            if ($uid > 0) {
-                return ['type' => 'user', 'id' => $uid, 'system' => 'vbulletin'];
-            }
-            if (preg_match('/^(\d+)/i', $rawQuery, $m)) {
-                return ['type' => 'user', 'id' => (int) $m[1], 'system' => 'vbulletin'];
+            if ($scriptName === 'member.php' || str_contains($rawUri, 'member.php')) {
+                $uid = (int) ($this->request->variable('u', 0) ?: $this->request->variable('userid', 0) ?: $this->request->variable('uid', 0));
+                if ($uid > 0) {
+                    return ['type' => 'user', 'id' => $uid, 'system' => 'vbulletin'];
+                }
+                if (preg_match('/^(\d+)/i', $rawQuery, $m)) {
+                    return ['type' => 'user', 'id' => (int) $m[1], 'system' => 'vbulletin'];
+                }
             }
         }
 
@@ -261,61 +369,80 @@ class MigrationRedirector implements EventSubscriberInterface
         // ---------------------------------------------------------------------
 
         // MyBB SEF friendly URLs
-        if (preg_match('#thread-(\d+)(?:-page-(\d+))?\.html#i', $rawUri, $m)) {
-            return ['type' => 'topic', 'id' => (int) $m[1], 'page' => (int) ($m[2] ?? 1), 'system' => 'mybb'];
-        }
-        if (preg_match('#post-(\d+)\.html#i', $rawUri, $m)) {
-            return ['type' => 'post', 'id' => (int) $m[1], 'system' => 'mybb'];
-        }
-        if (preg_match('#forum-(\d+)(?:-page-(\d+))?\.html#i', $rawUri, $m)) {
-            return ['type' => 'forum', 'id' => (int) $m[1], 'page' => (int) ($m[2] ?? 1), 'system' => 'mybb'];
-        }
-        if (preg_match('#user-(\d+)\.html#i', $rawUri, $m)) {
-            return ['type' => 'user', 'id' => (int) $m[1], 'system' => 'mybb'];
+        if ($this->isPlatformEnabled('mybb')) {
+            if (preg_match('#thread-(\d+)(?:-page-(\d+))?\.html#i', $rawUri, $m) && (int) $m[1] > 0) {
+                return ['type' => 'topic', 'id' => (int) $m[1], 'page' => (int) ($m[2] ?? 1), 'system' => 'mybb'];
+            }
+            if (preg_match('#post-(\d+)\.html#i', $rawUri, $m) && (int) $m[1] > 0) {
+                return ['type' => 'post', 'id' => (int) $m[1], 'system' => 'mybb'];
+            }
+            if (preg_match('#forum-(\d+)(?:-page-(\d+))?\.html#i', $rawUri, $m) && (int) $m[1] > 0) {
+                return ['type' => 'forum', 'id' => (int) $m[1], 'page' => (int) ($m[2] ?? 1), 'system' => 'mybb'];
+            }
+            if (preg_match('#user-(\d+)\.html#i', $rawUri, $m) && (int) $m[1] > 0) {
+                return ['type' => 'user', 'id' => (int) $m[1], 'system' => 'mybb'];
+            }
         }
 
         // XenForo friendly URL paths: /threads/slug.123/ or /threads/123/
-        if (preg_match('#/(?:index\.php\?)?threads/(?:[a-zA-Z0-9_\-\.%]+\.)?(\d+)(?:/(?:page-(\d+))?)?#i', $rawUri, $m)) {
-            return ['type' => 'topic', 'id' => (int) $m[1], 'page' => (int) ($m[2] ?? 1), 'system' => 'xenforo'];
-        }
-        if (preg_match('#/(?:index\.php\?)?posts/(\d+)#i', $rawUri, $m)) {
-            return ['type' => 'post', 'id' => (int) $m[1], 'system' => 'xenforo'];
-        }
-        if (preg_match('#/(?:index\.php\?)?forums/(?:[a-zA-Z0-9_\-\.%]+\.)?(\d+)(?:/(?:page-(\d+))?)?#i', $rawUri, $m)) {
-            return ['type' => 'forum', 'id' => (int) $m[1], 'page' => (int) ($m[2] ?? 1), 'system' => 'xenforo'];
-        }
-        if (preg_match('#/(?:index\.php\?)?members/(?:[a-zA-Z0-9_\-\.%]+\.)?(\d+)#i', $rawUri, $m)) {
-            return ['type' => 'user', 'id' => (int) $m[1], 'system' => 'xenforo'];
+        if ($this->isPlatformEnabled('xenforo')) {
+            if (preg_match('#/(?:index\.php\?)?threads/(?:[a-zA-Z0-9_\-\.%]+\.(\d+)|(\d+))(?:/(?:page-(\d+))?|/)?(?:\?|$)#i', $rawUri, $m)) {
+                $id = (int) (!empty($m[1]) ? $m[1] : ($m[2] ?? 0));
+                $page = (int) ($m[3] ?? 1);
+                if ($id > 0) {
+                    return ['type' => 'topic', 'id' => $id, 'page' => max(1, $page), 'system' => 'xenforo'];
+                }
+            }
+            if (preg_match('#/(?:index\.php\?)?posts/(\d+)(?:/|(?:\?|$))#i', $rawUri, $m) && (int) $m[1] > 0) {
+                return ['type' => 'post', 'id' => (int) $m[1], 'system' => 'xenforo'];
+            }
+            if (preg_match('#/(?:index\.php\?)?forums/(?:[a-zA-Z0-9_\-\.%]+\.(\d+)|(\d+))(?:/(?:page-(\d+))?|/)?(?:\?|$)#i', $rawUri, $m)) {
+                $id = (int) (!empty($m[1]) ? $m[1] : ($m[2] ?? 0));
+                $page = (int) ($m[3] ?? 1);
+                if ($id > 0) {
+                    return ['type' => 'forum', 'id' => $id, 'page' => max(1, $page), 'system' => 'xenforo'];
+                }
+            }
+            if (preg_match('#/(?:index\.php\?)?members/(?:[a-zA-Z0-9_\-\.%]+\.(\d+)|(\d+))(?:/|(?:\?|$))#i', $rawUri, $m)) {
+                $id = (int) (!empty($m[1]) ? $m[1] : ($m[2] ?? 0));
+                if ($id > 0) {
+                    return ['type' => 'user', 'id' => $id, 'system' => 'xenforo'];
+                }
+            }
         }
 
         // vBulletin 4.x / vBSEO friendly URL paths
-        if (preg_match('#/threads/(\d+)(?:-[^/]+)?#i', $rawUri, $m)) {
-            return ['type' => 'topic', 'id' => (int) $m[1], 'page' => 1, 'system' => 'vbulletin'];
-        }
-        if (preg_match('#/forum/(\d+)(?:-[^/]+)?#i', $rawUri, $m)) {
-            return ['type' => 'forum', 'id' => (int) $m[1], 'page' => 1, 'system' => 'vbulletin'];
+        if ($this->isPlatformEnabled('vbulletin')) {
+            if (preg_match('~/(?:index\.php\?)?threads/(\d+)(?:-[^/?#]+)?(?:/|(?:\?|$))~i', $rawUri, $m) && (int) $m[1] > 0) {
+                return ['type' => 'topic', 'id' => (int) $m[1], 'page' => 1, 'system' => 'vbulletin'];
+            }
+            if (preg_match('~/(?:index\.php\?)?forum/(\d+)(?:-[^/?#]+)?(?:/|(?:\?|$))~i', $rawUri, $m) && (int) $m[1] > 0) {
+                return ['type' => 'forum', 'id' => (int) $m[1], 'page' => 1, 'system' => 'vbulletin'];
+            }
         }
 
         // ---------------------------------------------------------------------
         // 4. SMF Query String in index.php (e.g. ?topic=123.0 or ;u=78)
         // ---------------------------------------------------------------------
 
-        if ($scriptName === 'index.php' || $scriptName === '') {
-            // SMF Post jump
-            if (preg_match('/(?:^|[;&?])topic=\d+\.msg(\d+)/i', $rawQuery, $m)) {
-                return ['type' => 'post', 'id' => (int) $m[1], 'system' => 'smf'];
-            }
-            // SMF Topic
-            if (preg_match('/(?:^|[;&?])topic=(\d+)(?:\.(\d+))?/i', $rawQuery, $m)) {
-                return ['type' => 'topic', 'id' => (int) $m[1], 'offset' => (int) ($m[2] ?? 0), 'system' => 'smf'];
-            }
-            // SMF Board
-            if (preg_match('/(?:^|[;&?])board=(\d+)(?:\.(\d+))?/i', $rawQuery, $m)) {
-                return ['type' => 'forum', 'id' => (int) $m[1], 'offset' => (int) ($m[2] ?? 0), 'system' => 'smf'];
-            }
-            // SMF User profile: index.php?action=profile;u=12
-            if (preg_match('/action=profile.*?[;?&](?:u|user)=(\d+)/i', $rawQuery, $m)) {
-                return ['type' => 'user', 'id' => (int) $m[1], 'system' => 'smf'];
+        if ($this->isPlatformEnabled('smf')) {
+            if ($scriptName === 'index.php' || $scriptName === '') {
+                // SMF Post jump
+                if (preg_match('/(?:^|[;&?])topic=\d+\.msg(\d+)/i', $rawQuery, $m)) {
+                    return ['type' => 'post', 'id' => (int) $m[1], 'system' => 'smf'];
+                }
+                // SMF Topic
+                if (preg_match('/(?:^|[;&?])topic=(\d+)(?:\.(\d+))?/i', $rawQuery, $m)) {
+                    return ['type' => 'topic', 'id' => (int) $m[1], 'offset' => (int) ($m[2] ?? 0), 'system' => 'smf'];
+                }
+                // SMF Board
+                if (preg_match('/(?:^|[;&?])board=(\d+)(?:\.(\d+))?/i', $rawQuery, $m)) {
+                    return ['type' => 'forum', 'id' => (int) $m[1], 'offset' => (int) ($m[2] ?? 0), 'system' => 'smf'];
+                }
+                // SMF User profile: index.php?action=profile;u=12
+                if (preg_match('/action=profile.*?[;?&](?:u|user)=(\d+)/i', $rawQuery, $m)) {
+                    return ['type' => 'user', 'id' => (int) $m[1], 'system' => 'smf'];
+                }
             }
         }
 
@@ -401,8 +528,13 @@ class MigrationRedirector implements EventSubscriberInterface
             }
         }
 
-        // 3. Fallback: Check if target ID exists identically in phpBB (Preserve IDs migration mode)
-        return $this->checkEntityExistsNative($contentType, $sourceId);
+        // 3. Fallback: Only if Preserve IDs is explicitly enabled by administrator
+        if ($this->configProvider->isMigrationPreserveIdsEnabled()) {
+            return $this->checkEntityExistsNative($contentType, $sourceId);
+        }
+
+        // Default: Fail closed (safe 404) to prevent content-mismatched redirects
+        return null;
     }
 
     private function checkEntityExistsNative(string $contentType, int $id): ?int
@@ -466,7 +598,7 @@ class MigrationRedirector implements EventSubscriberInterface
             $params['start'] = $start;
         }
 
-        $nativeUrl = append_sid($this->rootPath . 'viewtopic.' . $this->phpExt, $params);
+        $nativeUrl = $this->appendSid($this->rootPath . 'viewtopic.' . $this->phpExt, $params);
         return $this->absoluteUrl($nativeUrl);
     }
 
@@ -489,7 +621,7 @@ class MigrationRedirector implements EventSubscriberInterface
             }
         }
 
-        $nativeUrl = append_sid($this->rootPath . 'viewtopic.' . $this->phpExt, ['p' => $targetId]) . '#p' . $targetId;
+        $nativeUrl = $this->appendSid($this->rootPath . 'viewtopic.' . $this->phpExt, ['p' => $targetId]) . '#p' . $targetId;
         return $this->absoluteUrl($nativeUrl);
     }
 
@@ -529,7 +661,7 @@ class MigrationRedirector implements EventSubscriberInterface
             $params['start'] = $start;
         }
 
-        $nativeUrl = append_sid($this->rootPath . 'viewforum.' . $this->phpExt, $params);
+        $nativeUrl = $this->appendSid($this->rootPath . 'viewforum.' . $this->phpExt, $params);
         return $this->absoluteUrl($nativeUrl);
     }
 
@@ -549,11 +681,27 @@ class MigrationRedirector implements EventSubscriberInterface
             }
         }
 
-        $nativeUrl = append_sid($this->rootPath . 'memberlist.' . $this->phpExt, [
+        $nativeUrl = $this->appendSid($this->rootPath . 'memberlist.' . $this->phpExt, [
             'mode' => 'viewprofile',
             'u'    => $targetId,
         ]);
         return $this->absoluteUrl($nativeUrl);
+    }
+
+    /**
+     * Safely constructs URLs using append_sid or standard query formatting when offline/testing
+     */
+    private function appendSid(string $url, array $params = []): string
+    {
+        if (function_exists('append_sid')) {
+            return append_sid($url, $params);
+        }
+
+        if (!empty($params)) {
+            $url .= (str_contains($url, '?') ? '&' : '?') . http_build_query($params);
+        }
+
+        return $url;
     }
 
     /**
@@ -566,14 +714,22 @@ class MigrationRedirector implements EventSubscriberInterface
     {
         $str = trim($str, '/');
         if (preg_match('/(?:^|[.\/])(\d+)(?:\/page-(\d+))?$/i', $str, $m)) {
+            $id = (int) $m[1];
+            if ($id <= 0) {
+                return null;
+            }
             return [
-                'id'   => (int) $m[1],
-                'page' => isset($m[2]) ? (int) $m[2] : 1,
+                'id'   => $id,
+                'page' => isset($m[2]) ? max(1, (int) $m[2]) : 1,
             ];
         }
         if (preg_match('/(\d+)/', $str, $m)) {
+            $id = (int) $m[1];
+            if ($id <= 0) {
+                return null;
+            }
             return [
-                'id'   => (int) $m[1],
+                'id'   => $id,
                 'page' => 1,
             ];
         }
