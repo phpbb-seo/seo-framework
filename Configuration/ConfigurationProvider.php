@@ -81,6 +81,11 @@ class ConfigurationProvider
         return in_array(strtolower($platform), $platforms, true);
     }
 
+    public function isTransliterateSlugs(): bool
+    {
+        return (bool) ($this->config['seo_transliterate_slugs'] ?? false);
+    }
+
     public function get(string $key, mixed $default = null): mixed
     {
         return $this->config[$key] ?? $default;

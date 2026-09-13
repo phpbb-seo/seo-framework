@@ -123,7 +123,29 @@
 					<span class="pseo-preview-tag">{L_SEO_LIVE_PREVIEW}</span>
 					<span class="pseo-preview-url" id="preview_group">{PREVIEW_GROUP}</span>
 				</div>
+			</div>
 		</div>
+	</div>
+
+	<!-- URL Slug & Character Options Card -->
+	<div class="pseo-card">
+		<div class="pseo-card-header">
+			<h2 class="pseo-card-title">{L_SEO_SLUG_OPTIONS_TITLE}</h2>
+			<span class="pseo-badge pseo-badge--neutral">Slugs</span>
+		</div>
+		<div class="pseo-card-body">
+			<div class="pseo-field">
+				<label class="pseo-label" for="transliterate_slugs">
+					<span>{L_SEO_TRANSLITERATE_SLUGS}</span>
+				</label>
+				<label style="display: flex; align-items: flex-start; gap: 8px; font-weight: 500; cursor: pointer;">
+					<input type="checkbox" id="transliterate_slugs" name="transliterate_slugs" value="1" style="margin-top: 3px;"<!-- IF S_TRANSLITERATE_SLUGS --> checked="checked"<!-- ENDIF --> />
+					<span style="font-size: 13px; color: #475569; line-height: 1.4;">{L_SEO_TRANSLITERATE_SLUGS_EXPLAIN}</span>
+				</label>
+			</div>
+		</div>
+	</div>
+
 	<!-- Legacy Migration Card -->
 	<div class="pseo-card">
 

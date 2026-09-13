@@ -52,6 +52,9 @@ services:
 
     phpbbseo.framework.url.slug_generator:
         class: phpbbseo\framework\Url\DefaultSlugGenerator
+        arguments:
+            - null
+            - '@phpbbseo.framework.configuration.provider'
 
 
 

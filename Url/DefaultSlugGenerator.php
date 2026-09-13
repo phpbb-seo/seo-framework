@@ -5,9 +5,15 @@ namespace phpbbseo\framework\Url;
 
 class DefaultSlugGenerator implements SlugGeneratorInterface
 {
+    private readonly SlugOptions $options;
+
     public function __construct(
-        private readonly SlugOptions $options = new SlugOptions()
-    ) {}
+        ?SlugOptions $options = null,
+        private readonly ?\phpbbseo\framework\Configuration\ConfigurationProvider $configProvider = null
+    ) {
+        $this->options = $options ?? new SlugOptions();
+    }
+
 
     public function generate(string $text): string
     {
@@ -27,13 +33,39 @@ class DefaultSlugGenerator implements SlugGeneratorInterface
         // 3. Strip HTML markup tags (e.g. <b>text</b> or decoded <tags>)
         $text = strip_tags($text);
 
-        // 4. Normalize Unicode to Normalization Form C (or NFKC)
+        // 4. Optional ASCII transliteration for Latin-extended / diacritical characters
+        $transliterate = $this->options->transliterate || ($this->configProvider && $this->configProvider->isTransliterateSlugs());
+        if ($transliterate) {
+
+            $specialChars = [
+                'ß' => 'ss', 'ẞ' => 'SS',
+                'æ' => 'ae', 'Æ' => 'AE',
+                'œ' => 'oe', 'Œ' => 'OE',
+                'ø' => 'o',  'Ø' => 'O',
+                'ł' => 'l',  'Ł' => 'L',
+                'đ' => 'd',  'Đ' => 'D',
+                'ð' => 'd',  'Ð' => 'D',
+                'þ' => 'th', 'Þ' => 'TH',
+            ];
+            $text = strtr($text, $specialChars);
+
+            if (class_exists(\Normalizer::class)) {
+                $decomposed = \Normalizer::normalize($text, \Normalizer::FORM_D);
+                if ($decomposed !== false && $decomposed !== null) {
+                    $text = preg_replace('/[\x{0300}-\x{036f}]+/u', '', $decomposed) ?? $text;
+                }
+            }
+        }
+
+
+        // 5. Normalize Unicode to Normalization Form C (or NFKC)
         if (class_exists(\Normalizer::class)) {
             $normalized = \Normalizer::normalize($text, \Normalizer::FORM_C);
             if ($normalized !== false && $normalized !== null) {
                 $text = $normalized;
             }
         }
+
         
         // 4. Lowercase
         if ($this->options->lowercase) {

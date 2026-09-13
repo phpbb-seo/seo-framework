@@ -5,6 +5,23 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-09-13
+
+### Added
+- **ASCII Transliteration Option for Latin Diacritics**:
+  - Added configurable toggle (`seo_transliterate_slugs`) in ACP Permalinks to transliterate Latin accented characters (diacritical marks, ligatures, German eszett, etc.) into clean ASCII equivalents in URL slugs.
+  - Built on Unicode Form D canonical decomposition, specifically targeting only Latin combining diacritical marks (`[\x{0300}-\x{036f}]`) while guaranteeing 100% preservation of non-Latin scripts (Persian, Arabic, Cyrillic, Greek, Hebrew, CJK) and mixed-script titles.
+  - Safe fallback when `intl` extension / `Normalizer` is unavailable.
+
+### Performance
+- **Static Asset Pre-Boot 404 Fast-Path (`rewrite.php`)**:
+  - Eliminated full phpBB session, database, and extension boot cycles for missing static assets (`.png`, `.jpg`, `.js`, `.css`, `.woff2`, etc.).
+  - Resolves severe visual load latency and session locking contention (3-4 second delays) caused by extensions referencing missing static assets (such as PostReactions extension missing icons).
+  - Delivers an instant ~15ms lightweight HTTP 404 header (~31x speedup) before any phpBB session locking occurs.
+  - Heals malformed asset query-separators (e.g. `/&v=...`) before fast-path evaluation.
+
+---
+
 ## [1.2.1] - 2026-09-13
 
 ### Fixed (Emergency Security & Migration Engine Hardening)

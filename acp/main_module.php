@@ -164,6 +164,7 @@ class main_module
                 $legacyUsu          = $request->variable('legacy_usu_enabled', 0) ? 1 : 0;
                 $migrationRedirect  = $request->variable('migration_redirect_enabled', 0) ? 1 : 0;
                 $migrationPreserve  = $request->variable('migration_preserve_ids', 0) ? 1 : 0;
+                $transliterateSlugs = $request->variable('transliterate_slugs', 0) ? 1 : 0;
 
 
 
@@ -211,10 +212,9 @@ class main_module
                         'seo_permalink_preset'           => (string) ($config['seo_permalink_preset'] ?? 'modern'),
                         'phpbbseo_legacy_usu_enabled'    => (string) ($config['phpbbseo_legacy_usu_enabled'] ?? '0'),
                         'seo_migration_redirect_enabled' => (string) ($config['seo_migration_redirect_enabled'] ?? '0'),
-
-
                         'seo_migration_preserve_ids'     => (string) ($config['seo_migration_preserve_ids'] ?? '0'),
                         'seo_migration_platforms'        => (string) ($config['seo_migration_platforms'] ?? 'xenforo,vbulletin,mybb,smf'),
+                        'seo_transliterate_slugs'        => (string) ($config['seo_transliterate_slugs'] ?? '0'),
                         'seo_pattern_forum'              => (string) ($config['seo_pattern_forum'] ?? '/forum/{slug}-{id}/'),
                         'seo_pattern_forum_page'         => (string) ($config['seo_pattern_forum_page'] ?? '/forum/{slug}-{id}/page-{page}/'),
                         'seo_pattern_topic'              => (string) ($config['seo_pattern_topic'] ?? '/topic/{slug}-{id}/'),
@@ -255,6 +255,7 @@ class main_module
 
                         $config->set('seo_migration_preserve_ids', (string) $migrationPreserve);
                         $config->set('seo_migration_platforms', $migrationPlatformsStr);
+                        $config->set('seo_transliterate_slugs', (string) $transliterateSlugs);
                         $config->set('seo_pattern_forum', $patternForum);
                         $config->set('seo_pattern_forum_page', $patternForumPage);
                         $config->set('seo_pattern_topic', $patternTopic);
@@ -321,6 +322,7 @@ class main_module
             'PREVIEW_MEMBER'               => $previewMember,
             'PREVIEW_GROUP'                => $previewGroup,
             'S_LEGACY_USU_ENABLED'         => (bool) ($config['phpbbseo_legacy_usu_enabled'] ?? false),
+            'S_TRANSLITERATE_SLUGS'        => (bool) ($config['seo_transliterate_slugs'] ?? false),
 
 
             'S_MIGRATION_REDIRECT_ENABLED' => $migrationEnabled,

@@ -12,6 +12,8 @@ class SlugOptions
         public readonly int $maxLength = 255,
         public readonly string $separator = '-',
         public readonly bool $lowercase = true,
-        public readonly string $fallback = 'item'
+        public readonly string $fallback = 'item',
+        public readonly bool $transliterate = false
     ) {}
 }
+

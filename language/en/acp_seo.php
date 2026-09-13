@@ -186,6 +186,11 @@ $lang = array_merge($lang, [
     'SEO_MIGRATION_PRESERVE_IDS'            => 'Preserve IDs (1:1 Direct Database Primary Key Mapping)',
     'SEO_MIGRATION_PRESERVE_IDS_EXPLAIN'    => 'Only enable this if you know your old platform\'s numeric IDs were preserved identically 1:1 into phpBB (e.g. through a direct database import that retained primary keys). When disabled (default), numeric IDs that have no entry in phpbb_migration_id_map return a safe 404 instead of blindly redirecting to an unrelated topic or post.',
     'SEO_MIGRATION_NO_MAP_WARNING'          => 'Notice: Cross-Platform Migration redirects are enabled, but no phpbb_migration_id_map table was found and "Preserve IDs" is OFF. Legacy links with foreign numeric IDs will return 404 until mapping data is provided or "Preserve IDs" is enabled.',
+
+    // URL Slugs & Transliteration
+    'SEO_SLUG_OPTIONS_TITLE'              => 'URL Slug & Character Options',
+    'SEO_TRANSLITERATE_SLUGS'             => 'Transliterate Accented Latin Characters',
+    'SEO_TRANSLITERATE_SLUGS_EXPLAIN'     => 'When enabled, accented Latin characters (such as é, à, ö, ñ, ç) in topic and forum titles will be converted to basic ASCII equivalents (e, a, o, n, c) in URLs. Non-Latin scripts (such as Persian, Arabic, Cyrillic, Greek, Hebrew, CJK) remain fully preserved in their native characters.',
 ]);
 
 

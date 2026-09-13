@@ -132,14 +132,60 @@ if (preg_match('#(?:^|/)(adm/index\.php|download/file\.php|file\.php|posting\.ph
 
 // 2. Intercept and redirect relative static asset requests from deep SEO URL paths
 if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)) {
-    $assetRelPath = $assetMatch[1] . '/' . $assetMatch[2];
+    $assetRelPath = rtrim($assetMatch[1] . '/' . $assetMatch[2], '/');
     $fullAssetPath = $phpbbRootPath . $assetRelPath;
+
     if (is_file($fullAssetPath)) {
         $targetAssetUrl = ($boardDir !== '') ? $boardDir . '/' . $assetRelPath : '/' . $assetRelPath;
         header('Location: ' . $targetAssetUrl, true, 301);
         exit;
     }
+
+    // Static Asset Fast-Path:
+    // If the request targets a static asset file extension (images, css, js, fonts, maps)
+    // inside styles/, assets/, images/, or ext/ and the physical file does NOT exist on disk,
+    // verify it is NOT a dynamic controller route before fast-failing with 404.
+    if (preg_match('#\.(?:png|jpe?g|gif|svg|webp|ico|css|js|map|woff2?|ttf|eot|otf)$#i', $assetRelPath)) {
+        $isDynamicRoute = false;
+        $matcherFile = $phpbbRootPath . 'cache/production/url_matcher.php';
+        if (is_file($matcherFile)) {
+            try {
+                if (!class_exists('Symfony\\Component\\Routing\\RequestContext', false)) {
+                    require_once $phpbbRootPath . 'vendor/autoload.php';
+                }
+                require_once $matcherFile;
+                $context = new \Symfony\Component\Routing\RequestContext();
+                $matcher = new \phpbb_url_matcher($context);
+                try {
+                    $matcher->match('/' . ltrim($path, '/'));
+                    $isDynamicRoute = true;
+                } catch (\Symfony\Component\Routing\Exception\ResourceNotFoundException $e) {
+                    try {
+                        $matcher->match('/' . ltrim($assetRelPath, '/'));
+                        $isDynamicRoute = true;
+                    } catch (\Symfony\Component\Routing\Exception\ResourceNotFoundException $e2) {
+                        $isDynamicRoute = false;
+                    } catch (\Throwable $t2) {
+                        $isDynamicRoute = true;
+                    }
+                } catch (\Throwable $t) {
+                    $isDynamicRoute = true;
+                }
+            } catch (\Throwable $outer) {
+                $isDynamicRoute = true;
+            }
+        }
+
+        if (!$isDynamicRoute) {
+            http_response_code(404);
+            header('Content-Type: text/plain; charset=UTF-8');
+            header('X-Content-Type-Options: nosniff');
+            echo '404 Not Found';
+            exit;
+        }
+    }
 }
+
 
 // 2. Inbound SEO URL Route Matching
 if (is_array($routes) && !empty($routes)) {
