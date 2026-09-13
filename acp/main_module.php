@@ -292,15 +292,26 @@ class main_module
         $previewMember = $this->generatePreview($patternCompiler, $curMember, 'example-user', 27);
         $previewGroup  = $this->generatePreview($patternCompiler, $curGroup, 'example-group', 5);
 
-        // Check if migration_id_map table exists
+        // Check if migration_id_map table exists safely
         $hasMigrationMapTable = false;
         try {
-            $db = $container->get('dbal.conn');
             $tablePrefix = $container->getParameter('core.table_prefix');
-            $sql = 'SELECT 1 FROM ' . $tablePrefix . 'migration_id_map';
-            $r = $db->sql_query_limit($sql, 1);
-            $db->sql_freeresult($r);
-            $hasMigrationMapTable = true;
+            if ($container->has('dbal.tools')) {
+                $hasMigrationMapTable = (bool) $container->get('dbal.tools')->sql_table_exists($tablePrefix . 'migration_id_map');
+            } else {
+                $db = $container->get('dbal.conn');
+                if (method_exists($db, 'sql_return_on_error')) {
+                    $db->sql_return_on_error(true);
+                }
+                $r = $db->sql_query_limit('SELECT 1 FROM ' . $tablePrefix . 'migration_id_map', 1);
+                if (method_exists($db, 'sql_return_on_error')) {
+                    $db->sql_return_on_error(false);
+                }
+                if ($r) {
+                    $db->sql_freeresult($r);
+                    $hasMigrationMapTable = true;
+                }
+            }
         } catch (\Throwable) {
             $hasMigrationMapTable = false;
         }

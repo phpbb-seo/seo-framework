@@ -490,10 +490,20 @@ class MigrationRedirector implements EventSubscriberInterface
 
         if ($this->hasMigrationTable === null) {
             try {
+                if (method_exists($this->db, 'sql_return_on_error')) {
+                    $this->db->sql_return_on_error(true);
+                }
                 $sql = 'SELECT 1 FROM ' . $this->tablePrefix . 'migration_id_map';
                 $res = $this->db->sql_query_limit($sql, 1);
-                $this->db->sql_freeresult($res);
-                $this->hasMigrationTable = true;
+                if (method_exists($this->db, 'sql_return_on_error')) {
+                    $this->db->sql_return_on_error(false);
+                }
+                if ($res) {
+                    $this->db->sql_freeresult($res);
+                    $this->hasMigrationTable = true;
+                } else {
+                    $this->hasMigrationTable = false;
+                }
             } catch (\Throwable) {
                 $this->hasMigrationTable = false;
             }
