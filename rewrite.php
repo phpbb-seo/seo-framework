@@ -130,13 +130,88 @@ if (preg_match('#(?:^|/)(adm/index\.php|download/file\.php|file\.php|posting\.ph
     }
 }
 
-// 2. Intercept and redirect relative static asset requests from deep SEO URL paths
+// 2. Intercept and handle relative static asset requests from deep SEO URL paths
 if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)) {
     $assetRelPath = rtrim($assetMatch[1] . '/' . $assetMatch[2], '/');
     $fullAssetPath = $phpbbRootPath . $assetRelPath;
 
     if (is_file($fullAssetPath)) {
+        $realAssetPath = realpath($fullAssetPath);
+        if ($realAssetPath !== false && str_starts_with(str_replace('\\', '/', $realAssetPath), $phpbbRootPath)) {
+            $ext = strtolower(pathinfo($realAssetPath, PATHINFO_EXTENSION));
+            $staticMimes = [
+                'css'   => 'text/css; charset=UTF-8',
+                'js'    => 'application/javascript; charset=UTF-8',
+                'mjs'   => 'application/javascript; charset=UTF-8',
+                'png'   => 'image/png',
+                'jpg'   => 'image/jpeg',
+                'jpeg'  => 'image/jpeg',
+                'gif'   => 'image/gif',
+                'svg'   => 'image/svg+xml',
+                'webp'  => 'image/webp',
+                'ico'   => 'image/x-icon',
+                'woff'  => 'font/woff',
+                'woff2' => 'font/woff2',
+                'ttf'   => 'font/ttf',
+                'otf'   => 'font/otf',
+                'eot'   => 'application/vnd.ms-fontobject',
+                'map'   => 'application/json',
+            ];
+
+            if (isset($staticMimes[$ext])) {
+                $mtime = filemtime($realAssetPath);
+                $fileSize = filesize($realAssetPath);
+                $etag = '"' . md5($mtime . '-' . $fileSize) . '"';
+
+                header('Content-Type: ' . $staticMimes[$ext]);
+                header('ETag: ' . $etag);
+                header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $mtime) . ' GMT');
+                header('Cache-Control: public, max-age=31536000, immutable');
+                header('X-Content-Type-Options: nosniff');
+                header('Vary: Accept-Encoding');
+
+                $ifNoneMatch = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH']) : null;
+                $ifModifiedSince = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? @strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) : null;
+
+                if (($ifNoneMatch !== null && $ifNoneMatch === $etag) || ($ifModifiedSince !== null && $ifModifiedSince >= $mtime)) {
+                    http_response_code(304);
+                    exit;
+                }
+
+                $isCompressible = in_array($ext, ['css', 'js', 'mjs', 'svg', 'json', 'map'], true);
+                $acceptsGzip = isset($_SERVER['HTTP_ACCEPT_ENCODING']) && str_contains($_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip');
+                $phpAutoGzip = (bool) filter_var(ini_get('zlib.output_compression'), FILTER_VALIDATE_BOOLEAN)
+                    || in_array('ob_gzhandler', ob_list_handlers(), true)
+                    || in_array('zlib output compression', ob_list_handlers(), true);
+
+                if ($isCompressible && $acceptsGzip && function_exists('gzencode') && !$phpAutoGzip) {
+                    $compressed = gzencode(file_get_contents($realAssetPath), 6);
+                    if ($compressed !== false) {
+                        header('Content-Encoding: gzip');
+                        header('Content-Length: ' . strlen($compressed));
+                        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') {
+                            echo $compressed;
+                        }
+                        exit;
+                    }
+                }
+
+                if (!$phpAutoGzip) {
+                    header('Content-Length: ' . $fileSize);
+                }
+                if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') {
+                    readfile($realAssetPath);
+                }
+                exit;
+            }
+        }
+
+        // Fallback: fast 301 redirect preserving query parameters and adding Cache-Control
         $targetAssetUrl = ($boardDir !== '') ? $boardDir . '/' . $assetRelPath : '/' . $assetRelPath;
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $targetAssetUrl .= '?' . $_SERVER['QUERY_STRING'];
+        }
+        header('Cache-Control: public, max-age=31536000');
         header('Location: ' . $targetAssetUrl, true, 301);
         exit;
     }

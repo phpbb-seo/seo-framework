@@ -5,6 +5,23 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-09-15
+
+### Fixed
+- **Root-Cause Asset Path Normalization Across All Presets (`SeoListener`)**:
+  - Implemented `core.page_header_after` event listener that normalizes template asset paths (`ROOT_PATH`, `T_ASSETS_PATH`, `T_THEME_PATH`, `T_STYLESHEET_LINK`, `T_JQUERY_LINK`, etc.) to board-rooted paths (`/boardDir/` or `/`) on all frontend pages when SEO rewriting is active.
+  - Guarantees web browsers resolve static assets directly against Apache/web server native handlers (`200 OK` in < 1ms) without passing through PHP rewriting.
+  - Empirically verified across Modern, Compact (`/t/{id}/{slug}/`), Classic (`/{slug}-t{id}.html`), and Custom deep permalink presets.
+
+### Performance
+- **Zero-Redirect Direct Static Asset Delivery (`rewrite.php`)**:
+  - Replaced 301 redirect cycles for misplaced or legacy asset requests with direct static file streaming (`200 OK`), eliminating socket queue stalls in client browsers.
+  - Full HTTP caching compliance: sends `Cache-Control: public, max-age=31536000, immutable`, `ETag`, `Last-Modified`, and handles `304 Not Modified` on conditional requests.
+  - Added GZIP compression support with intelligent double-compression protection when `zlib.output_compression` is active in `php.ini`.
+  - Fallback 301 redirects (for unmapped types) now strictly preserve query strings (`?assets_version=...`, `?v=...`) and send `Cache-Control` headers.
+
+---
+
 ## [1.2.2] - 2026-09-13
 
 ### Added

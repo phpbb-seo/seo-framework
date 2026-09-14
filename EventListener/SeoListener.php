@@ -78,6 +78,8 @@ class SeoListener implements EventSubscriberInterface
             // Moderation approval synchronization
             'core.approve_topics_after'                 => 'onApproveTopicsAfter',
             'core.approve_posts_after'                  => 'onApprovePostsAfter',
+            // Root-relative asset path normalization on deep SEO URLs
+            'core.page_header_after'                    => 'onPageHeaderAfter',
         ];
     }
 
@@ -792,5 +794,46 @@ class SeoListener implements EventSubscriberInterface
                 $event['redirect'] = $adminPath;
             }
         }
+    }
+
+    public function onPageHeaderAfter($event): void
+    {
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN') || defined('IN_CRON') || defined('IN_INSTALL')) {
+            return;
+        }
+
+        $boardUrl = generate_board_url();
+        $path = parse_url($boardUrl, PHP_URL_PATH) ?? '';
+        $boardPath = rtrim($path, '/') . '/';
+
+        $stylePath = rawurlencode($this->user->style['style_path'] ?? 'prosilver');
+        $langName = rawurlencode($this->user->lang_name ?? 'en');
+        $assetsVersion = (string) $this->configProvider->get('assets_version', '');
+        $versionParam = ($assetsVersion !== '') ? '?assets_version=' . $assetsVersion : '';
+
+        $allowCdn = (bool) $this->configProvider->get('allow_cdn', false);
+        $loadJqueryUrl = (string) $this->configProvider->get('load_jquery_url', '');
+        $loadFontAwesomeUrl = (string) $this->configProvider->get('load_font_awesome_url', '');
+
+        $jqueryLink = ($allowCdn && $loadJqueryUrl !== '')
+            ? $loadJqueryUrl
+            : "{$boardPath}assets/javascript/jquery-3.7.1.min.js{$versionParam}";
+
+        $fontAwesomeLink = ($allowCdn && $loadFontAwesomeUrl !== '')
+            ? $loadFontAwesomeUrl
+            : "{$boardPath}assets/css/font-awesome.min.css{$versionParam}";
+
+        $this->template->assign_vars([
+            'ROOT_PATH'              => $boardPath,
+            'T_ASSETS_PATH'          => "{$boardPath}assets",
+            'T_THEME_PATH'           => "{$boardPath}styles/{$stylePath}/theme",
+            'T_TEMPLATE_PATH'        => "{$boardPath}styles/{$stylePath}/template",
+            'T_SUPER_TEMPLATE_PATH'  => "{$boardPath}styles/{$stylePath}/template",
+            'T_IMAGES_PATH'          => "{$boardPath}images/",
+            'T_STYLESHEET_LINK'      => "{$boardPath}styles/{$stylePath}/theme/stylesheet.css{$versionParam}",
+            'T_STYLESHEET_LANG_LINK' => "{$boardPath}styles/{$stylePath}/theme/{$langName}/stylesheet.css{$versionParam}",
+            'T_FONT_AWESOME_LINK'    => $fontAwesomeLink,
+            'T_JQUERY_LINK'          => $jqueryLink,
+        ]);
     }
 }
