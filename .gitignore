@@ -8,6 +8,7 @@ composer.lock
 # IDE & OS Artifacts
 .idea/
 .vscode/
+.gemini/
 .DS_Store
 Thumbs.db
 
