@@ -90,6 +90,17 @@ if ($boardDir !== '' && str_starts_with($path, $boardDir . '/')) {
     $path = substr($path, strlen($boardDir));
 }
 
+// Pre-boot fast path for llms.txt (serves cached Pro file with 0 database queries)
+if ($path === '/llms.txt') {
+    $llmsCacheFile = $phpbbRootPath . 'ext/phpbbseo/pro/store/llms.txt.cache';
+    if (is_file($llmsCacheFile) && is_readable($llmsCacheFile)) {
+        header('Content-Type: text/plain; charset=UTF-8');
+        header('Cache-Control: public, max-age=86400');
+        readfile($llmsCacheFile);
+        exit;
+    }
+}
+
 // 1. Intercept and route native operational endpoints (e.g. relative resolution from deep SEO URLs)
 $nativeScriptMap = [
     'adm/index.php'     => 'adm/index.php',

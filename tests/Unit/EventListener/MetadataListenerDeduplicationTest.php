@@ -95,7 +95,7 @@ HTML;
 
         preg_match_all('#<link\b(?=[^>]*\brel=["\']canonical["\'])[^>]*>#si', $processed, $matches);
         $this->assertCount(1, $matches[0]);
-        $this->assertContains('https://example.com/topic/clean-slug-1/', $matches[0][0]);
+        $this->assertStringContainsString('https://example.com/topic/clean-slug-1/', $matches[0][0]);
         $this->assertFalse(str_contains($processed, 'legacy-canonical-1'));
     }
 
@@ -139,7 +139,7 @@ HTML;
 
         preg_match_all('#<meta\b(?=[^>]*\bname=["\']description["\'])[^>]*>#si', $processed, $matches);
         $this->assertCount(1, $matches[0]);
-        $this->assertContains('New clean description', $matches[0][0]);
+        $this->assertStringContainsString('New clean description', $matches[0][0]);
         $this->assertFalse(str_contains($processed, 'Old template description'));
     }
 
@@ -158,6 +158,6 @@ HTML;
             'https://example.com/'
         );
 
-        $this->assertContains('<title>(3) Community - MySite</title>', $processed);
+        $this->assertStringContainsString('<title>(3) Community - MySite</title>', $processed);
     }
 }

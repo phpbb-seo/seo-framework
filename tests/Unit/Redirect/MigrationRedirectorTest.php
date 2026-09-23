@@ -32,7 +32,8 @@ class MigrationRedirectorTest extends TestCase
         array $serverVars = [],
         array $configVars = [],
         ?array $migrationRows = [],
-        ?RouterInterface $router = null
+        ?RouterInterface $router = null,
+        ?EntitySeoContext $entityContext = null
     ): MigrationRedirector {
         $db = $this->createMock(driver_interface::class);
 
@@ -92,7 +93,7 @@ class MigrationRedirectorTest extends TestCase
         $configProvider = new ConfigurationProvider($config);
         $slugGenerator = new DefaultSlugGenerator(new SlugOptions());
         $slugRepo = new SlugRepository($db, $slugGenerator, 'phpbb_');
-        $entityContext = new EntitySeoContext($slugRepo);
+        $entityContext = $entityContext ?? new EntitySeoContext($slugRepo);
         $paginationResolver = new PaginationResolver();
         $permalinkConfig = new PermalinkConfiguration($configProvider);
         $compiler = new UrlPatternCompiler();
@@ -790,4 +791,124 @@ class MigrationRedirectorTest extends TestCase
         $zeroMybb = $this->createRedirector([], ['REQUEST_URI' => '/thread-0.html']);
         $this->assertNull($zeroMybb->detectLegacyRequest());
     }
+
+    // =========================================================================
+    // SECTION 10: Subdirectory and Nested Subdirectory Board Path Deduplication
+    // =========================================================================
+
+    public function testBoardPathDeduplicationAcrossAllPlatforms(): void
+    {
+        $platforms = [
+            'xenforo'   => ['params' => [], 'server' => ['REQUEST_URI' => '/threads/welcome.100/']],
+            'vbulletin' => ['params' => ['t' => 100], 'server' => ['REQUEST_URI' => '/showthread.php?t=100', 'SCRIPT_NAME' => '/showthread.php', 'QUERY_STRING' => 't=100']],
+            'mybb'      => ['params' => [], 'server' => ['REQUEST_URI' => '/thread-100.html']],
+            'smf'       => ['params' => [], 'server' => ['REQUEST_URI' => '/index.php?topic=100.0', 'SCRIPT_NAME' => '/index.php', 'QUERY_STRING' => 'topic=100.0']],
+        ];
+
+        $environments = [
+            'root' => [
+                'script_path'   => '/',
+                'expected_base' => 'https://example.com/topic/my-test-topic-100/',
+            ],
+            'subdirectory' => [
+                'script_path'   => '/phpbb/',
+                'expected_base' => 'https://example.com/phpbb/topic/my-test-topic-100/',
+            ],
+            'nested' => [
+                'script_path'   => '/community/forum/',
+                'expected_base' => 'https://example.com/community/forum/topic/my-test-topic-100/',
+            ],
+            'forum_subfolder' => [
+                'script_path'   => '/forum/',
+                'expected_base' => 'https://example.com/forum/topic/my-test-topic-100/',
+            ],
+        ];
+
+        foreach ($environments as $envName => $env) {
+            foreach ($platforms as $platformName => $pData) {
+                $ctx = new EntitySeoContext();
+                $ctx->setTopicTitle(100, 'my-test-topic');
+
+                $migrationRows = [
+                    ['content_type' => 'topic', 'source_id' => 100, 'target_id' => 100, 'source_system' => $platformName],
+                    ['eid' => 100],
+                ];
+
+                $serverVars = array_merge([
+                    'HTTP_HOST' => 'example.com',
+                    'HTTPS'     => 'on',
+                ], $pData['server']);
+
+                $configVars = [
+                    'script_path'                    => $env['script_path'],
+                    'seo_rewrite_enabled'            => '1',
+                    'seo_migration_redirect_enabled' => '1',
+                    'seo_migration_preserve_ids'     => '1',
+                    'seo_migration_platforms'        => 'xenforo,vbulletin,mybb,smf',
+                ];
+
+                $GLOBALS['test_board_url'] = 'https://example.com' . ($env['script_path'] !== '/' ? rtrim($env['script_path'], '/') : '');
+
+                $redirector = $this->createRedirector($pData['params'], $serverVars, $configVars, $migrationRows, null, $ctx);
+                $redirector->onCommon(new \stdClass());
+
+                $this->assertSame(301, $redirector->getLastStatusCode(), "[$envName - $platformName] HTTP status must be 301");
+                $this->assertSame($env['expected_base'], $redirector->getLastRedirectUrl(), "[$envName - $platformName] Location target must match expected URL exactly without duplicated path prefix");
+            }
+        }
+        unset($GLOBALS['test_board_url']);
+    }
+
+    /**
+     * Specifically asserts that forum migrations on a board installed in '/forum/'
+     * with the Modern preset redirect to https://example.com/forum/forum/general-2/
+     * without stripping the preset '/forum/' prefix across all 4 platforms.
+     */
+    public function testForumMigrationOnBoardInstalledInForumSubfolderWithModernPreset(): void
+    {
+        $platforms = [
+            'xenforo'   => ['params' => [], 'server' => ['REQUEST_URI' => '/forums/general.2/']],
+            'vbulletin' => ['params' => ['f' => 2], 'server' => ['REQUEST_URI' => '/forumdisplay.php?f=2', 'SCRIPT_NAME' => '/forumdisplay.php', 'QUERY_STRING' => 'f=2']],
+            'mybb'      => ['params' => [], 'server' => ['REQUEST_URI' => '/forum-2.html']],
+            'smf'       => ['params' => [], 'server' => ['REQUEST_URI' => '/index.php?board=2.0', 'SCRIPT_NAME' => '/index.php', 'QUERY_STRING' => 'board=2.0']],
+        ];
+
+        $GLOBALS['test_board_url'] = 'https://example.com/forum';
+
+        foreach ($platforms as $platformName => $pData) {
+            $ctx = new EntitySeoContext();
+            $ctx->setForumName(2, 'general');
+
+            $migrationRows = [
+                ['content_type' => 'forum', 'source_id' => 2, 'target_id' => 2, 'source_system' => $platformName],
+                ['eid' => 2],
+            ];
+
+            $serverVars = array_merge([
+                'HTTP_HOST' => 'example.com',
+                'HTTPS'     => 'on',
+            ], $pData['server']);
+
+            $configVars = [
+                'script_path'                    => '/forum/',
+                'seo_permalink_preset'           => 'modern',
+                'seo_rewrite_enabled'            => '1',
+                'seo_migration_redirect_enabled' => '1',
+                'seo_migration_preserve_ids'     => '1',
+                'seo_migration_platforms'        => 'xenforo,vbulletin,mybb,smf',
+            ];
+
+            $redirector = $this->createRedirector($pData['params'], $serverVars, $configVars, $migrationRows, null, $ctx);
+            $redirector->onCommon(new \stdClass());
+
+            $this->assertSame(301, $redirector->getLastStatusCode(), "[$platformName forum migration] HTTP status must be 301");
+            $this->assertSame(
+                'https://example.com/forum/forum/general-2/',
+                $redirector->getLastRedirectUrl(),
+                "[$platformName forum migration] Expected https://example.com/forum/forum/general-2/ (board path + preset path)"
+            );
+        }
+        unset($GLOBALS['test_board_url']);
+    }
 }
+

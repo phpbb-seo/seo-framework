@@ -296,4 +296,58 @@ class CanonicalResolverTest extends TestCase
         $this->assertNotNull($canonicalUrl);
         $this->assertSame('https://localhost/phpbb/topic/multi-page-test-topic-100/page/2/#p147', $canonicalUrl);
     }
+
+    /**
+     * Board installed in a subfolder named '/forum' must NEVER strip the '/forum/' resource prefix.
+     */
+    public function testBoardInForumSubfolderDoesNotStripForumPrefix(): void
+    {
+        $GLOBALS['test_board_url'] = 'https://www.php-bb.ir/forum';
+        $this->entityContext->setForumName(2, 'announcements-news');
+
+        $context = new RequestContext(
+            'https',
+            'www.php-bb.ir',
+            '/forum/forum/announcements-news-2/',
+            '',
+            'viewforum'
+        );
+
+        $canonicalUrl = $this->resolver->resolve($context);
+        $this->assertNotNull($canonicalUrl);
+        $this->assertSame('https://www.php-bb.ir/forum/forum/announcements-news-2/', $canonicalUrl);
+
+        unset($GLOBALS['test_board_url']);
+    }
+
+    /**
+     * Comprehensive unit test for board at '/forum/' with Modern preset:
+     * topic, forum, paginated forum, and member canonical URLs.
+     */
+    public function testBoardInForumSubfolderWithModernPresetUrls(): void
+    {
+        $GLOBALS['test_board_url'] = 'https://example.com/forum';
+        $this->entityContext->setTopicTitle(100, 'multi-page-test-topic');
+        $this->entityContext->setForumName(2, 'general-discussion');
+        $this->entityContext->setUsername(2, 'admin');
+
+        // 1. Topic URL
+        $topicCtx = new RequestContext('https', 'example.com', '/forum/viewtopic.php', 't=100', 'viewtopic');
+        $this->assertSame('https://example.com/forum/topic/multi-page-test-topic-100/', $this->resolver->resolve($topicCtx));
+
+        // 2. Forum URL (board path + preset path: /forum/forum/general-discussion-2/)
+        $forumCtx = new RequestContext('https', 'example.com', '/forum/viewforum.php', 'f=2', 'viewforum');
+        $this->assertSame('https://example.com/forum/forum/general-discussion-2/', $this->resolver->resolve($forumCtx));
+
+        // 3. Paginated Forum URL (page 2 with start=50, topics_per_page=50)
+        $forumPageCtx = new RequestContext('https', 'example.com', '/forum/viewforum.php', 'f=2&start=50', 'viewforum');
+        $this->assertSame('https://example.com/forum/forum/general-discussion-2/page/2/', $this->resolver->resolve($forumPageCtx));
+
+        // 4. Member URL
+        $memberCtx = new RequestContext('https', 'example.com', '/forum/memberlist.php', 'mode=viewprofile&u=2', 'memberlist');
+        $this->assertSame('https://example.com/forum/member/admin-2/', $this->resolver->resolve($memberCtx));
+
+        unset($GLOBALS['test_board_url']);
+    }
 }
+

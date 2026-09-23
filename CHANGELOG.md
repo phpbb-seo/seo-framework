@@ -5,6 +5,32 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-09-23
+
+### Fixed
+- **MigrationRedirector Board Path Duplication on Subdirectory Installations**:
+  - Fixed path resolution in `MigrationRedirector` where legacy migration redirects (XenForo, vBulletin, MyBB, SMF) generated URLs with duplicated board paths (e.g. `/phpbb/phpbb/topic/...` instead of `/phpbb/topic/...`) on subdirectory installs.
+  - Re-used `CanonicalResolver::buildAbsoluteUrl()` safe path normalization logic to detect and strip duplicate board path prefixes across root (`/`), subdirectory (`/phpbb/`, `/forum/`), and nested subdirectory (`/community/forum/`) environments.
+  - Affected versions: v1.2.0–v1.2.3, only when `seo_migration_redirect_enabled` was enabled; root installs were unaffected.
+
+### Added
+- **Pre-Boot Fast Path for /llms.txt (`rewrite.php`)**:
+  - Added pre-boot fast path in `rewrite.php` serving `/llms.txt` directly from `ext/phpbbseo/pro/store/llms.txt.cache` when present (used by Pro; no effect without Pro); falls through to standard routing otherwise.
+
+### Changed
+- **Unified Absolute URL Building (`CanonicalResolver`)**:
+  - Absolute URL building in `CanonicalResolver` was unified: board-relative permalink paths are converted to root-relative paths before building absolute URLs, using one shared method (`buildAbsoluteUrl()`) across `CanonicalResolver` and `MigrationRedirector`.
+  - Canonical URLs are unchanged for root and subdirectory installs, including boards installed in `/forum/` with the Modern preset.
+- **Pro Cache Invalidation on Disable (`ext.php`)**:
+  - `ext.php` now removes `ext/phpbbseo/pro/store/llms.txt.cache` when Lite is disabled so that `rewrite.php` immediately bypasses the fast path.
+
+### Tests
+- **Test Suite Updates**:
+  - Updated assertions in `MetadataListenerDeduplicationTest.php` from deprecated `assertContains` to `assertStringContainsString` for newer PHPUnit compatibility.
+  - Added unit tests in `CanonicalResolverTest.php` and `MigrationRedirectorTest.php` covering board installations in `/forum/` subfolders with the Modern preset.
+
+---
+
 ## [1.2.3] - 2026-09-15
 
 ### Fixed

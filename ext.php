@@ -99,6 +99,12 @@ class ext extends \phpbb\extension\base
                 $cacheFile = $storeDir . 'compiled_routes.php';
                 @file_put_contents($cacheFile, "<?php\n// Disabled extension route cache marker.\ndeclare(strict_types=1);\n\nreturn ['__disabled' => true];\n");
 
+                // Invalidate Pro llms.txt cache so rewrite.php bypasses fast path when disabled
+                $proLlmsCache = $this->container->getParameter('core.root_path') . 'ext/phpbbseo/pro/store/llms.txt.cache';
+                if (is_file($proLlmsCache)) {
+                    @unlink($proLlmsCache);
+                }
+
                 // Prepare Safe Uninstall fallback rules in .htaccess so SEO URLs 301-redirect to native phpBB
                 try {
                     require_once $this->extension_path . 'SafeUninstall/SafeUninstallManager.php';

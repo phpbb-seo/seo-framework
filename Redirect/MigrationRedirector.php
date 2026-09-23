@@ -8,6 +8,7 @@ use phpbb\db\driver\driver_interface;
 use phpbb\request\request_interface;
 use phpbbseo\framework\Configuration\ConfigurationProvider;
 use phpbbseo\framework\Context\EntitySeoContext;
+use phpbbseo\framework\Canonical\CanonicalResolver;
 use phpbbseo\framework\Rewrite\PublicResourceUrlResolver;
 use phpbbseo\framework\Rewrite\SlugRepository;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -747,32 +748,25 @@ class MigrationRedirector implements EventSubscriberInterface
     }
 
     /**
-     * Ensure URL is absolute with board scheme and domain
+     * Ensure URL is absolute with board scheme and domain, delegating to CanonicalResolver
+     * to guarantee that board path prefix duplication is eliminated on subdirectory installations.
      */
     private function absoluteUrl(string $url): string
     {
-        if (preg_match('#^https?://#i', $url)) {
-            return $url;
-        }
-
         $boardUrl = '';
-        if (function_exists('generate_board_url')) {
+        if (!$this->isTesting && function_exists('generate_board_url')) {
             $boardUrl = generate_board_url();
         }
 
         if (empty($boardUrl)) {
             $isHttps = ($this->request->server('HTTPS') === 'on' || (int) $this->request->server('SERVER_PORT') === 443);
             $scheme = $isHttps ? 'https' : 'http';
-            $host = (string) $this->request->server('HTTP_HOST', 'localhost');
-            $boardUrl = $scheme . '://' . $host;
+            $host = (string) ($this->request->server('HTTP_HOST') ?: $this->configProvider->get('server_name', 'localhost'));
+            $scriptPath = (string) $this->configProvider->get('script_path', '/');
+            $boardUrl = $scheme . '://' . $host . ($scriptPath !== '/' && $scriptPath !== '' ? '/' . trim($scriptPath, '/') : '');
         }
 
-        $cleanPath = ltrim($url, '/');
-        if (str_starts_with($cleanPath, './')) {
-            $cleanPath = substr($cleanPath, 2);
-        }
-
-        return rtrim($boardUrl, '/') . '/' . ltrim($cleanPath, '/');
+        return CanonicalResolver::buildAbsoluteUrl($url, $boardUrl);
     }
 
     /**

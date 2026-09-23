@@ -42,7 +42,7 @@ class CanonicalResolver
         if ($route !== null) {
             $seoUrl = $this->generateCanonicalForRoute($route, $context);
             if ($seoUrl !== null) {
-                return $this->buildAbsoluteUrl($seoUrl, $context);
+                return self::buildAbsoluteUrl($this->toRootRelative($seoUrl));
             }
         }
 
@@ -50,7 +50,7 @@ class CanonicalResolver
         $script = basename($path);
         $seoUrl = $this->generateCanonicalForLegacy($script, $context);
         if ($seoUrl !== null) {
-            return $this->buildAbsoluteUrl($seoUrl, $context);
+            return self::buildAbsoluteUrl($this->toRootRelative($seoUrl));
         }
 
         return null;
@@ -212,23 +212,83 @@ class CanonicalResolver
         return null;
     }
 
-    private function buildAbsoluteUrl(string $seoPath, RequestContext $context): string
+    /**
+     * Converts a board-relative SEO path into a root-relative path by prefixing the board path.
+     */
+    private function toRootRelative(string $seoPath): string
     {
-        $boardUrl = rtrim(generate_board_url(), '/');
-        if (preg_match('#^https?://#i', $boardUrl, $schemeMatch)) {
-            $boardUrl = $schemeMatch[0] . preg_replace('#^(?:https?://)+#i', '', $boardUrl);
-        }
+        $boardUrl = function_exists('generate_board_url') ? generate_board_url() : '';
         $scriptPath = (string) parse_url($boardUrl, PHP_URL_PATH);
         $boardPath = '/' . trim($scriptPath, '/');
-
-        $cleanSeoPath = '/' . ltrim($seoPath, '/');
-
         if ($boardPath !== '/' && $boardPath !== '') {
-            if (str_starts_with($cleanSeoPath, $boardPath . '/')) {
-                $cleanSeoPath = substr($cleanSeoPath, strlen($boardPath));
+            return $boardPath . '/' . ltrim($seoPath, '/');
+        }
+
+        return '/' . ltrim($seoPath, '/');
+    }
+
+    /**
+     * Builds a single authoritative absolute URL, ensuring the board URL path prefix
+     * is not duplicated even when the given SEO path already includes the board path.
+     *
+     * Input Contract:
+     * - If $seoPath is already an absolute URL (http:// or https://), it is returned unchanged.
+     * - $seoPath should be a root-relative path (starting with '/') representing the web server URI.
+     *   When phpBB is installed in a subdirectory (e.g. "/phpbb/" or "/forum/"), callers must provide
+     *   a consistent root-relative path containing the board prefix (e.g. "/phpbb/topic/..." or
+     *   "/forum/forum/...").
+     * - The de-duplication guard inspects the leading board prefix "/{boardPath}/". If present,
+     *   it ensures the absolute URL prepends the origin without duplicating the subdirectory segment.
+     */
+    public static function buildAbsoluteUrl(string $seoPath, ?string $boardUrl = null): string
+    {
+        if (preg_match('#^https?://#i', $seoPath)) {
+            return $seoPath;
+        }
+
+        if ($boardUrl === null || $boardUrl === '') {
+            if (function_exists('generate_board_url')) {
+                $boardUrl = generate_board_url();
             }
         }
 
-        return rtrim($boardUrl, '/') . '/' . ltrim($cleanSeoPath, '/');
+        if (empty($boardUrl)) {
+            $boardUrl = 'http://localhost';
+        }
+
+        $boardUrl = rtrim($boardUrl, '/');
+        if (preg_match('#^https?://#i', $boardUrl, $schemeMatch)) {
+            $boardUrl = $schemeMatch[0] . preg_replace('#^(?:https?://)+#i', '', $boardUrl);
+        }
+
+        $parsed = parse_url($boardUrl);
+        $scheme = $parsed['scheme'] ?? 'http';
+        $host = $parsed['host'] ?? 'localhost';
+        $port = isset($parsed['port']) ? ':' . $parsed['port'] : '';
+        $origin = $scheme . '://' . $host . $port;
+
+        $scriptPath = (string) ($parsed['path'] ?? '');
+        $boardPath = '/' . trim($scriptPath, '/');
+        if ($boardPath === '/') {
+            $boardPath = '';
+        }
+
+        $cleanSeoPath = '/' . ltrim($seoPath, '/');
+        if (str_starts_with($cleanSeoPath, '/./')) {
+            $cleanSeoPath = '/' . substr($cleanSeoPath, 3);
+        }
+
+        if ($boardPath !== '') {
+            $boardPrefix = $boardPath . '/';
+            // De-duplication: only apply when input includes the board prefix (matching leading "/{boardPath}/" or exact "/{boardPath}")
+            if (str_starts_with($cleanSeoPath, $boardPrefix) || $cleanSeoPath === $boardPath) {
+                return $origin . $cleanSeoPath;
+            }
+
+            // Fallback: if input was board-relative (missing board prefix), prepend boardPath
+            return $origin . $boardPath . $cleanSeoPath;
+        }
+
+        return $origin . $cleanSeoPath;
     }
 }
