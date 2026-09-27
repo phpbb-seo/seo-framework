@@ -143,14 +143,8 @@ class PublicResourceUrlResolver
 
                         if ($pos !== null && isset($pos['prev_posts'])) {
                             $start = (int) (floor($pos['prev_posts'] / $postsPerPage) * $postsPerPage);
-                            if ($anchor === '') {
-                                $anchor = '#p' . $postId;
-                            }
                         } else {
                             $start = $pagination['start'] ?? 0;
-                            if ($postId !== null && $postId > 0 && $anchor === '') {
-                                $anchor = '#p' . $postId;
-                            }
                         }
                         if ($start > 0) {
                             $seoPath = $this->permalinkProfile->generateTopicPageUrl($id, $start, $postsPerPage);
@@ -171,9 +165,6 @@ class PublicResourceUrlResolver
                                 ? $this->permalinkProfile->generateTopicPageUrl($topicId, $start, $postsPerPage)
                                 : $this->permalinkProfile->generateTopicUrl($topicId);
                             $excludeKeys = ['p', 't', 'start', 'f'];
-                            if ($anchor === '') {
-                                $anchor = '#p' . $id;
-                            }
                         }
                         break;
 

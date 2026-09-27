@@ -185,5 +185,72 @@ class PublicResourceUrlResolverTest extends TestCase
         $this->assertSame('topic', $route->resource);
         $this->assertSame(1715, $route->id);
     }
+
+    /**
+     * append_sid path: resolve('viewtopic.php', 'p=X') must NOT add #p anchor.
+     * Core phpBB then appends '#p'.$id, producing exactly one #p fragment.
+     */
+    public function testResolvePostDoesNotIncludeAnchorSoCoreAppendProducesSingleAnchor(): void
+    {
+        $this->entityContext->setPostToTopic([41 => 1715]);
+        $this->entityContext->setPostPositions([41 => ['topic_id' => 1715, 'prev_posts' => 0]]);
+
+        $base = $this->resolver->getBoardPath();
+        $resolved = $this->resolver->resolve('viewtopic.php', 'p=41');
+        $this->assertSame($base . 'topic/ruben-van-bommel-1715/', $resolved);
+
+        // Core phpBB behavior in viewtopic.php, viewforum.php, search.php, posting.php:
+        // append_sid(...) . '#p' . $row['post_id']
+        $coreUrl = $resolved . '#p41';
+        $this->assertSame($base . 'topic/ruben-van-bommel-1715/#p41', $coreUrl);
+        $this->assertSame(1, substr_count($coreUrl, '#p41'));
+    }
+
+    /**
+     * resolve('viewtopic.php', 't=X&p=Y') must NOT add #p anchor.
+     */
+    public function testResolveTopicWithPostIdDoesNotIncludeAnchor(): void
+    {
+        $this->entityContext->setPostToTopic([41 => 1715]);
+        $this->entityContext->setPostPositions([41 => ['topic_id' => 1715, 'prev_posts' => 0]]);
+
+        $base = $this->resolver->getBoardPath();
+        $resolved = $this->resolver->resolve('viewtopic.php', 't=1715&p=41');
+        $this->assertSame($base . 'topic/ruben-van-bommel-1715/', $resolved);
+
+        $coreUrl = $resolved . '#p41';
+        $this->assertSame($base . 'topic/ruben-van-bommel-1715/#p41', $coreUrl);
+        $this->assertSame(1, substr_count($coreUrl, '#p41'));
+    }
+
+    /**
+     * Post on subsequent page must resolve to paginated topic URL without #p anchor.
+     */
+    public function testResolvePostOnSubsequentPageDoesNotIncludeAnchor(): void
+    {
+        $this->entityContext->setPostToTopic([99 => 1715]);
+        $this->entityContext->setPostPositions([99 => ['topic_id' => 1715, 'prev_posts' => 25]]);
+
+        $base = $this->resolver->getBoardPath();
+        $resolved = $this->resolver->resolve('viewtopic.php', 'p=99');
+        $this->assertSame($base . 'topic/ruben-van-bommel-1715/page/2/', $resolved);
+
+        $coreUrl = $resolved . '#p99';
+        $this->assertSame($base . 'topic/ruben-van-bommel-1715/page/2/#p99', $coreUrl);
+        $this->assertSame(1, substr_count($coreUrl, '#p99'));
+    }
+
+    /**
+     * Explicit input anchor is preserved untouched.
+     */
+    public function testResolveWithExplicitInputAnchorPreservesIt(): void
+    {
+        $this->entityContext->setPostToTopic([41 => 1715]);
+        $this->entityContext->setPostPositions([41 => ['topic_id' => 1715, 'prev_posts' => 0]]);
+
+        $base = $this->resolver->getBoardPath();
+        $resolved = $this->resolver->resolve('viewtopic.php', 'p=41#custom-fragment');
+        $this->assertSame($base . 'topic/ruben-van-bommel-1715/#custom-fragment', $resolved);
+    }
 }
 

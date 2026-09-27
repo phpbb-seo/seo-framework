@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed core phpBB template variable concatenation bug where `&view=print` or `&bookmark=1` were naively appended to query-less SEO URLs without a `?` delimiter.
   - Added inbound query regex healing in `rewrite.php` and `InboundRouteResolver` supporting both slash-terminated (`/topic/slug/&view=print`) and extension-terminated (`/t1-slug.html&view=print`) URLs.
   - Updated `SeoListener::onPageHeader` to heal `U_PRINT_TOPIC` and `U_BOOKMARK_TOPIC` before rendering, and bypass legacy rewrite redirects for print view requests.
+- **Duplicate Anchor Fragments in Post Links (`#p{id}#p{id}`)**:
+  - Fixed duplicate `#p` anchor generation in `PublicResourceUrlResolver` where `#p{id}` was added on the `append_sid` path while phpBB core (`viewtopic.php`, `viewforum.php`, `search.php`, `posting.php`) automatically appends its own `#p{id}` to the returned URL.
+  - `PublicResourceUrlResolver` now omits `#p` on `append_sid` when no anchor is present in the input, while server 301 redirects (`CanonicalResolver`) continue to emit exactly one `#p{id}` fragment.
 
 ### Added
 - **Official Extension Pre Validator (EPV) & Test Suite Tooling**:
