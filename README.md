@@ -39,7 +39,7 @@ Modern, enterprise-grade Search Engine Optimization infrastructure for phpBB.
 ### ⚡ High-Performance Static Asset Delivery & 404 Fast-Path
 * **Zero-Redirect Direct Asset Streaming**: Misplaced or rewritten theme/extension static assets are delivered directly (`200 OK`) with full HTTP caching (`Cache-Control: public, max-age=31536000, immutable`, `ETag`, `Last-Modified`, `304 Not Modified`, and GZIP compression).
 * **Lightweight 404 Fast-Path**: Missing static assets (`.png`, `.jpg`, `.js`, `.css`, `.woff2`, etc.) receive an instant ~15ms HTTP 404 before full phpBB session boot, eliminating session locking contention and server stalls.
-* **AI Agent Endpoint Support**: Pre-boot fast-path routing for `/llms.txt`.
+* **Extensible Pro Fast-Path Hooks**: Pre-boot router hooks enabling Pro features (such as `/llms.txt` cache serving) to deliver payloads with zero database queries.
 
 ### 🗺️ Keyset-Streamed XML Sitemap Suite
 * **Sitemaps Protocol 0.9 Compliant**: Fully compatible with Google Search Console, Bing Webmaster Tools, and Yandex.
@@ -81,7 +81,7 @@ phpBB SEO Framework is designed with a unified, extensible architecture. The Lit
 | **Unicode UTF-8 & Diacritics Transliteration** | ✅ Included | ✅ Included |
 | **Safe Uninstall Suite & Pre-Flight Diagnostics** | ✅ Included | ✅ Included |
 | **Persistent Slug Backfill Engine (CLI & ACP)** | ✅ Included | ✅ Included |
-| **AI Agent `/llms.txt` Endpoint Support** | ✅ Included | ✅ Included |
+| **AI Agent `/llms.txt` Generator & Endpoint** | ❌ | ✅ Included |
 | **On-Page SEO Analyzer (Real-time scoring & audits)** | ❌ | ✅ Included |
 | **Titles & Meta Pro (Advanced Rules & Per-Forum Overrides)** | ❌ | ✅ Included |
 | **OpenGraph & Twitter Card Social Metadata** | ❌ | ✅ Included |
