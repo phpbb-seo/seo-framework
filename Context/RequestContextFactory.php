@@ -27,11 +27,11 @@ class RequestContextFactory
         
         $scheme = $request->server('HTTPS', 'off') !== 'off' ? 'https' : 'http';
         $canonicalScheme = $this->configProvider->get('server_protocol', $scheme . '://');
-        $scheme = str_replace('://', '', $canonicalScheme);
+        $scheme = str_replace('://', '', (string) $canonicalScheme);
 
-        $rawUri = $request->server('SEO_PUBLIC_REQUEST_URI', '');
+        $rawUri = (string) ($request->server('SEO_PUBLIC_REQUEST_URI', '') ?? '');
         if ($rawUri === '') {
-            $rawUri = $request->server('REQUEST_URI', '');
+            $rawUri = (string) ($request->server('REQUEST_URI', '') ?? '');
         }
         $qPos = strpos($rawUri, '?');
         $rawPath = ($qPos !== false) ? substr($rawUri, 0, $qPos) : $rawUri;

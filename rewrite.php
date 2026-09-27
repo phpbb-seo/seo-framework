@@ -27,7 +27,7 @@ $phpbbRootPath = rtrim(str_replace('\\', '/', $rawRoot), '/') . '/';
 $phpbb_root_path = './';
 $phpEx = 'php';
 
-
+define('PHPBB_SEO_REWRITE', true);
 
 $cacheFile = __DIR__ . '/store/compiled_routes.php';
 
@@ -70,9 +70,9 @@ if ($routes === null || (!is_array($routes) && !file_exists($cacheFile))) {
 
 $rawUri = $_SERVER['REQUEST_URI'] ?? '';
 $qPos = strpos($rawUri, '?');
-if ($qPos === false && preg_match('~^(/.*?)/(?:&amp;|&)(.*)$~i', $rawUri, $ampMatches)) {
-    $path = $ampMatches[1] . '/';
-    parse_str($ampMatches[2], $extraGet);
+if ($qPos === false && preg_match('~^(/.*?)(/)?(?:&amp;|&)(.*)$~i', $rawUri, $ampMatches)) {
+    $path = $ampMatches[1] . ($ampMatches[2] ?? '');
+    parse_str($ampMatches[3], $extraGet);
     $_GET = array_merge($_GET, $extraGet);
 } else {
     $path = ($qPos !== false) ? substr($rawUri, 0, $qPos) : $rawUri;

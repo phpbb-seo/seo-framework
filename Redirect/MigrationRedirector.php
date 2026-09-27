@@ -552,10 +552,10 @@ class MigrationRedirector implements EventSubscriberInterface
     {
         try {
             $sql = match ($contentType) {
-                'topic' => 'SELECT topic_id AS eid FROM ' . $this->tablePrefix . 'topics WHERE topic_id = ' . (int) $id,
-                'post'  => 'SELECT post_id AS eid FROM ' . $this->tablePrefix . 'posts WHERE post_id = ' . (int) $id,
-                'forum' => 'SELECT forum_id AS eid FROM ' . $this->tablePrefix . 'forums WHERE forum_id = ' . (int) $id,
-                'user'  => 'SELECT user_id AS eid FROM ' . $this->tablePrefix . 'users WHERE user_id = ' . (int) $id,
+                'topic' => 'SELECT topic_id AS eid FROM ' . TOPICS_TABLE . ' WHERE topic_id = ' . (int) $id,
+                'post'  => 'SELECT post_id AS eid FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int) $id,
+                'forum' => 'SELECT forum_id AS eid FROM ' . FORUMS_TABLE . ' WHERE forum_id = ' . (int) $id,
+                'user'  => 'SELECT user_id AS eid FROM ' . USERS_TABLE . ' WHERE user_id = ' . (int) $id,
                 default => null,
             };
 

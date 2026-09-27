@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace phpbbseo\framework\Url;
 
+if (!defined('IN_PHPBB')) {
+    exit;
+}
+
 /**
  * Classifies query parameters for SEO URL handling.
  */

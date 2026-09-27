@@ -3,8 +3,8 @@
     "type": "phpbb-extension",
     "description": "Modern SEO extension for phpBB with SEO-friendly URLs, canonical URLs, titles & meta, XML sitemaps and multilingual support.",
     "homepage": "https://www.phpbbseo.com/",
-    "version": "1.2.4",
-    "time": "2026-09-15",
+    "version": "1.2.5",
+    "time": "2026-09-27",
 
     "license": "GPL-2.0-only",
     "authors": [
@@ -23,7 +23,8 @@
         "composer/installers": "~1.0"
     },
     "require-dev": {
-        "phpbb/epv": "dev-master"
+        "phpbb/epv": "dev-master",
+        "phpunit/phpunit": "10.5"
     },
     "extra": {
         "display-name": "phpBB SEO Framework",

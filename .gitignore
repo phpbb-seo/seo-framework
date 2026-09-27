@@ -1,5 +1,6 @@
 # Composer dependencies
 /vendor/
+/vendor_dev/
 composer.lock
 
 # Runtime compiled artifacts
@@ -20,3 +21,4 @@ Thumbs.db
 # Testing & Coverage
 /tests/coverage/
 .phpunit.result.cache
+.phpunit.cache/

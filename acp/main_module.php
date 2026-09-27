@@ -364,13 +364,13 @@ class main_module
             if (!check_form_key('acp_seo_titles_meta')) {
                 $errors[] = $user->lang('FORM_INVALID');
             } else {
-                $metaEnable  = $request->variable('meta_enable', 1) ? '1' : '0';
-                $homeTitle   = trim($request->variable('home_title', '', true));
-                $homeDesc    = trim($request->variable('home_desc', '', true));
-                $forumTitle  = trim($request->variable('forum_title', '', true));
-                $topicTitle  = trim($request->variable('topic_title', '', true));
-                $memberTitle = trim($request->variable('member_title', '', true));
-                $descMaxLen  = $request->variable('desc_max_len', 155);
+                $metaEnable         = $request->variable('meta_enable', 1) ? '1' : '0';
+                $homeTitle          = trim($request->variable('home_title', '', true));
+                $homeDesc           = trim($request->variable('home_desc', '', true));
+                $forumTitle         = trim($request->variable('forum_title', '', true));
+                $topicTitle         = trim($request->variable('topic_title', '', true));
+                $memberTitle        = trim($request->variable('member_title', '', true));
+                $descMaxLen         = $request->variable('desc_max_len', 155);
 
                 if ($descMaxLen <= 0 || $descMaxLen > 500) {
                     $descMaxLen = 155;
@@ -511,8 +511,8 @@ class main_module
 
         if ($request->is_set_post('action_backfill_step')) {
             if (!check_form_key('pseo_sitemap_rebuild')) {
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'error' => $user->lang('FORM_INVALID')]);
+                $response = new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => $user->lang('FORM_INVALID')], 400);
+                $response->send();
                 exit;
             }
 
@@ -523,8 +523,7 @@ class main_module
 
             try {
                 $res = $backfillManager->backfillBatch('topic', $lastId, $batchSize, true);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode([
+                $response = new \Symfony\Component\HttpFoundation\JsonResponse([
                     'success'   => true,
                     'processed' => $res->processed,
                     'last_id'   => $res->lastId,
@@ -532,16 +531,15 @@ class main_module
                     'completed' => $res->completed,
                     'elapsed'   => $res->elapsed,
                 ]);
+                $response->send();
                 exit;
             } catch (\phpbbseo\framework\Backfill\Exception\BackfillLockException $e) {
-                http_response_code(409);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'error' => $e->getMessage(), 'locked' => true]);
+                $response = new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => $e->getMessage(), 'locked' => true], 409);
+                $response->send();
                 exit;
             } catch (\Throwable $e) {
-                http_response_code(500);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                $response = new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+                $response->send();
                 exit;
             }
         }
@@ -634,8 +632,8 @@ class main_module
             'S_HTACCESS_EXISTS'    => $analysis['htaccess_exists'],
             'S_HTACCESS_WRITABLE'  => $analysis['htaccess_writable'],
             'S_IS_PREPARED'        => $analysis['is_prepared'],
-            'HTACCESS_RULES'       => htmlspecialchars($safeUninstall->generateHtaccessRules()),
-            'NGINX_RULES'          => htmlspecialchars($safeUninstall->generateNginxRules()),
+            'HTACCESS_RULES'       => utf8_htmlspecialchars($safeUninstall->generateHtaccessRules()),
+            'NGINX_RULES'          => utf8_htmlspecialchars($safeUninstall->generateNginxRules()),
             'S_SUCCESS'            => !empty($successMsg),
             'SUCCESS_MSG'          => $successMsg,
             'S_ERROR'              => !empty($errorMsg),

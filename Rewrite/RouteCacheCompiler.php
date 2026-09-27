@@ -150,8 +150,6 @@ class RouteCacheCompiler
         // 5. Write to temporary file first
         $store = rtrim($this->storeDir, '/\\') . '/';
         $tempFile = $store . 'compiled_routes.php.tmp_' . bin2hex(random_bytes(4));
-        $targetFile = $store . 'compiled_routes.php';
-
         $fileContent = "<?php\n// Auto-generated route cache. Do not edit directly.\ndeclare(strict_types=1);\n\nreturn " . var_export($routes, true) . ";\n";
 
         if (@file_put_contents($tempFile, $fileContent) === false) {

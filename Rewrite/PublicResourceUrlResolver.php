@@ -30,7 +30,12 @@ class PublicResourceUrlResolver
      */
     public function resolve(string $url, array|string|bool $params = [], bool $isAmp = true): ?string
     {
-        if (!$this->configProvider->isRewriteEnabled()) {
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN')) {
+            return null;
+        }
+
+        $normalizedUrl = str_replace('\\', '/', $url);
+        if (preg_match('#(?:^|/)(adm/|mcp\.php|ucp\.php)#i', $normalizedUrl)) {
             return null;
         }
 
@@ -90,6 +95,10 @@ class PublicResourceUrlResolver
 
         // Canonicalize relative board paths (handles ../, ./, and existing board prefix across all contexts)
         $cleanPath = $this->normalizeBoardPath($rawPath, $boardPath);
+
+        if (preg_match('#(?:^|/)(adm/|mcp\.php|ucp\.php)#i', $cleanPath)) {
+            return null;
+        }
 
         // 1. Board Index root normalization
         if ($cleanPath === 'index.php' || $cleanPath === '') {

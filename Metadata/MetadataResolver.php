@@ -143,7 +143,7 @@ class MetadataResolver
         if ($postText === '' && $context->resourceId > 0 && $this->db !== null) {
             $firstPostId = (int) ($context->entityData['topic_first_post_id'] ?? 0);
             if ($firstPostId > 0) {
-                $sql = 'SELECT post_text FROM ' . POSTS_TABLE . ' WHERE post_id = ' . $firstPostId;
+                $sql = 'SELECT post_text FROM ' . POSTS_TABLE . ' WHERE post_id = ' . (int) $firstPostId;
             } else {
                 $sql = 'SELECT post_text FROM ' . POSTS_TABLE . ' WHERE topic_id = ' . (int) $context->resourceId . ' ORDER BY post_id ASC';
             }

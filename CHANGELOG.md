@@ -5,6 +5,26 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2026-09-27
+
+### Fixed
+- **Administrative Path Isolation (ACP, MCP, UCP, `adm/`)**:
+  - Fixed a critical regression in ACP pagination (e.g. *Manage bots*, *Admin log*) where clicking page numbers redirected to the board index instead of the respective ACP module page.
+  - Added strict isolation guards across `PublicResourceUrlResolver` and `SeoListener` (`onPaginationGeneratePageLink`, `onAppendSid`, `onPageHeader`, `onCommon`, `onUserSetup`, `onModifyUsernameString`, `onModifyGroupNameString`) to guarantee that URLs targeting ACP (`adm/`, `IN_ADMIN`, `ADMIN_START`), MCP (`mcp.php`), or UCP (`ucp.php`) are never intercepted or rewritten by the SEO framework.
+  - Fixed the JS "Jump to page" box (`data-base-url`) in ACP pagination templates by preserving original administrative URLs in `BASE_URL`.
+- **Malformed Query Parameter Attachment (`/&view=print` & `/&bookmark=1`)**:
+  - Fixed core phpBB template variable concatenation bug where `&view=print` or `&bookmark=1` were naively appended to query-less SEO URLs without a `?` delimiter.
+  - Added inbound query regex healing in `rewrite.php` and `InboundRouteResolver` supporting both slash-terminated (`/topic/slug/&view=print`) and extension-terminated (`/t1-slug.html&view=print`) URLs.
+  - Updated `SeoListener::onPageHeader` to heal `U_PRINT_TOPIC` and `U_BOOKMARK_TOPIC` before rendering, and bypass legacy rewrite redirects for print view requests.
+
+### Added
+- **Official Extension Pre Validator (EPV) & Test Suite Tooling**:
+  - Full codebase refactoring for phpBB EPV compliance (`utf8_htmlspecialchars`, explicit integer casting in SQL queries, core table constants).
+  - Added official `license.txt` conforming to phpBB CDB packaging standards.
+  - Added comprehensive unit test coverage for ACP, MCP, and UCP pagination isolation and `/&view=print` parameter healing.
+
+---
+
 ## [1.2.4] - 2026-09-23
 
 ### Fixed

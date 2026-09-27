@@ -127,7 +127,7 @@ class MetadataListener implements EventSubscriberInterface
             $this->template->assign_vars([
                 'PAGE_TITLE'             => $result->title,
                 'S_SEO_META_DESCRIPTION' => $result->hasDescription(),
-                'SEO_META_DESCRIPTION'   => htmlspecialchars($result->description, ENT_QUOTES, 'UTF-8'),
+                'SEO_META_DESCRIPTION'   => htmlspecialchars($result->description, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             ]);
 
             // Resolve canonical URL for branding block
@@ -140,9 +140,9 @@ class MetadataListener implements EventSubscriberInterface
                 $canonicalUrl = $this->canonicalResolver->resolve($reqContext);
             }
 
-            $finalEscapedTitle = htmlspecialchars($result->title, ENT_QUOTES, 'UTF-8');
-            $finalEscapedDesc = $result->hasDescription() ? htmlspecialchars($result->description, ENT_QUOTES, 'UTF-8') : null;
-            $finalEscapedCanonical = ($canonicalUrl !== null && $canonicalUrl !== '') ? htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') : null;
+            $finalEscapedTitle = htmlspecialchars($result->title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $finalEscapedDesc = $result->hasDescription() ? htmlspecialchars($result->description, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : null;
+            $finalEscapedCanonical = ($canonicalUrl !== null && $canonicalUrl !== '') ? htmlspecialchars($canonicalUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : null;
 
             // Register clean output buffer filter to structure branded SEO metadata in <head>
             ob_start(function ($buffer) use ($finalEscapedTitle, $finalEscapedDesc, $finalEscapedCanonical) {

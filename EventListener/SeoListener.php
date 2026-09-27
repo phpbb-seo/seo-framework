@@ -89,7 +89,8 @@ class SeoListener implements EventSubscriberInterface
 
     public function onCommon($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN')) {
+        $scriptName = str_replace('\\', '/', (string) $this->request->server('SCRIPT_NAME', ''));
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN') || str_contains($scriptName, '/adm/')) {
             return;
         }
 
@@ -118,7 +119,8 @@ class SeoListener implements EventSubscriberInterface
 
     public function onUserSetup($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN')) {
+        $scriptName = str_replace('\\', '/', (string) $this->request->server('SCRIPT_NAME', ''));
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN') || str_contains($scriptName, '/adm/')) {
             return;
         }
 
@@ -192,6 +194,11 @@ class SeoListener implements EventSubscriberInterface
         $rawUri = (string) $this->request->server('REQUEST_URI', '');
         $view = (string) $this->request->variable('view', '');
         if ($view === 'print' || str_contains($rawUri, 'view=print')) {
+            return;
+        }
+
+        // Do not redirect MCP or UCP requests
+        if (str_ends_with($scriptName, 'mcp.php') || str_ends_with($scriptName, 'ucp.php')) {
             return;
         }
 
@@ -399,7 +406,8 @@ class SeoListener implements EventSubscriberInterface
 
     public function onModifyUsernameString($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled()) {
+        $scriptName = str_replace('\\', '/', (string) $this->request->server('SCRIPT_NAME', ''));
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN') || str_contains($scriptName, '/adm/')) {
             return;
         }
 
@@ -430,7 +438,7 @@ class SeoListener implements EventSubscriberInterface
             // Surgically replace only the href attribute to keep phpBB's styles, class, colors, and accessibility tags intact
             $event['username_string'] = preg_replace(
                 '/href="[^"]*"/',
-                'href="' . htmlspecialchars($seoUrl, ENT_COMPAT) . '"',
+                'href="' . utf8_htmlspecialchars($seoUrl) . '"',
                 $event['username_string'],
                 1
             );
@@ -439,7 +447,8 @@ class SeoListener implements EventSubscriberInterface
 
     public function onModifyGroupNameString($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled()) {
+        $scriptName = str_replace('\\', '/', (string) $this->request->server('SCRIPT_NAME', ''));
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN') || str_contains($scriptName, '/adm/')) {
             return;
         }
 
@@ -453,7 +462,7 @@ class SeoListener implements EventSubscriberInterface
             $seoUrl = $this->urlResolver->resolve('memberlist.php', ['mode' => 'group', 'g' => $groupId]);
             if ($seoUrl !== null) {
                 $pattern = '#href="[^"]*memberlist\.[a-z]+\?[^"]*g=' . $groupId . '(?=[&"\#])[^"]*"#i';
-                $replacement = 'href="' . htmlspecialchars($seoUrl, ENT_COMPAT) . '"';
+                $replacement = 'href="' . utf8_htmlspecialchars($seoUrl) . '"';
                 $event['group_name_string'] = preg_replace($pattern, $replacement, $groupNameString);
             }
         }
@@ -465,7 +474,8 @@ class SeoListener implements EventSubscriberInterface
 
     public function onPageHeader($event): void
     {
-        if (defined('ADMIN_START') || defined('IN_ADMIN') || str_contains((string) $this->request->server('SCRIPT_NAME', ''), '/adm/')) {
+        $scriptName = str_replace('\\', '/', (string) $this->request->server('SCRIPT_NAME', ''));
+        if (defined('ADMIN_START') || defined('IN_ADMIN') || str_contains($scriptName, '/adm/')) {
             return;
         }
 
@@ -488,6 +498,11 @@ class SeoListener implements EventSubscriberInterface
         }
 
         if (!$this->configProvider->isRewriteEnabled()) {
+            return;
+        }
+
+        // Do not issue legacy 301 redirects on MCP or UCP pages
+        if (str_ends_with($scriptName, 'mcp.php') || str_ends_with($scriptName, 'ucp.php')) {
             return;
         }
 
@@ -556,6 +571,17 @@ class SeoListener implements EventSubscriberInterface
             $event['page_data'] = $pageData;
         }
 
+        // Heal template vars where phpBB core naively concatenated & or &amp; to query-less SEO URLs (e.g. viewtopic.php line 845)
+        foreach (['U_PRINT_TOPIC', 'U_BOOKMARK_TOPIC'] as $varName) {
+            $val = (string) $this->template->retrieve_var($varName);
+            if ($val !== '' && !str_contains($val, '?') && preg_match('~(?:&amp;|&)(view=print|bookmark=1)~i', $val)) {
+                $fixed = preg_replace('~(/|\.html)?(?:&amp;|&)([^#]+)~i', '$1?$2', $val);
+                if ($fixed !== null && $fixed !== $val) {
+                    $this->template->assign_var($varName, $fixed);
+                }
+            }
+        }
+
         // Do not redirect view=print requests (utility print view must render directly with NOINDEX)
         $rawUri = (string) $this->request->server('REQUEST_URI', '');
         $view = (string) $this->request->variable('view', '');
@@ -577,7 +603,12 @@ class SeoListener implements EventSubscriberInterface
 
     public function onAppendSid($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN') || str_contains((string) $this->request->server('SCRIPT_NAME', ''), '/adm/')) {
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN')) {
+            return;
+        }
+
+        $scriptName = str_replace('\\', '/', (string) $this->request->server('SCRIPT_NAME', ''));
+        if (str_contains($scriptName, '/adm/')) {
             return;
         }
 
@@ -591,6 +622,11 @@ class SeoListener implements EventSubscriberInterface
         }
 
         $page = (string) ($event['url'] ?? '');
+        $normalizedPage = str_replace('\\', '/', $page);
+        if (preg_match('#(?:^|/)(adm/|mcp\.php|ucp\.php)#i', $normalizedPage)) {
+            return;
+        }
+
         $params = $event['params'] ?? [];
         $isAmp = (bool) ($event['is_amp'] ?? true);
         $sessionId = $event['session_id'] ?? false;
@@ -615,7 +651,12 @@ class SeoListener implements EventSubscriberInterface
 
     public function onPaginationGeneratePageLink($event): void
     {
-        if (!$this->configProvider->isRewriteEnabled()) {
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN')) {
+            return;
+        }
+
+        $scriptName = str_replace('\\', '/', (string) $this->request->server('SCRIPT_NAME', ''));
+        if (str_contains($scriptName, '/adm/')) {
             return;
         }
 
@@ -624,6 +665,11 @@ class SeoListener implements EventSubscriberInterface
         $perPage = (int) ($event['per_page'] ?? 0);
 
         if (!is_string($baseUrl) || $perPage <= 0) {
+            return;
+        }
+
+        $normalizedBase = str_replace('\\', '/', $baseUrl);
+        if (preg_match('#(?:^|/)(adm/|mcp\.php|ucp\.php)#i', $normalizedBase)) {
             return;
         }
 

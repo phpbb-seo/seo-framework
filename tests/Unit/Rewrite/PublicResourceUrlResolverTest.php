@@ -151,4 +151,39 @@ class PublicResourceUrlResolverTest extends TestCase
         $this->assertSame('topic', $routeAmp->resource);
         $this->assertSame(1715, $routeAmp->id);
     }
+
+    /**
+     * ACP, MCP, UCP, and any administrative paths must NEVER be rewritten.
+     */
+    public function testAcpMcpUcpUrlsAreNeverRewritten(): void
+    {
+        // ACP direct path and query
+        $this->assertNull($this->resolver->resolve('adm/index.php', 'i=acp_bots&mode=bots&start=25'));
+        $this->assertNull($this->resolver->resolve('adm/index.php?i=acp_bots&mode=bots&start=25'));
+        $this->assertNull($this->resolver->resolve('./adm/index.php', 'i=acp_logs&start=50'));
+
+        // MCP
+        $this->assertNull($this->resolver->resolve('mcp.php', 'i=main&mode=front'));
+        $this->assertNull($this->resolver->resolve('./mcp.php?i=reports&start=25'));
+
+        // UCP
+        $this->assertNull($this->resolver->resolve('ucp.php', 'i=ucp_pm&mode=view'));
+        $this->assertNull($this->resolver->resolve('./ucp.php?i=ucp_notifications&start=15'));
+    }
+
+    /**
+     * view=print query parameter healing when concatenated to SEO URL
+     */
+    public function testViewPrintParameterHealing(): void
+    {
+        $base = $this->resolver->getBoardPath();
+        $healedPrint = $this->resolver->resolve('/topic/ruben-van-bommel-1715/&view=print');
+        $this->assertSame($base . 'topic/ruben-van-bommel-1715/?view=print', $healedPrint);
+
+        $route = $this->inboundResolver->resolve('/topic/ruben-van-bommel-1715/&view=print');
+        $this->assertNotNull($route);
+        $this->assertSame('topic', $route->resource);
+        $this->assertSame(1715, $route->id);
+    }
 }
+

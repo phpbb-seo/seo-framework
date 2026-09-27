@@ -50,20 +50,25 @@ class SitemapController
         $xslUrl = $this->urlGenerator->getXslUrl();
 
         $response = new StreamedResponse(function () use ($sitemaps, $xslUrl) {
-            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-            echo "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_XML1, 'UTF-8') . "\"?>\n";
-            echo "<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
+            $fp = fopen('php://output', 'wb');
+            if ($fp === false) {
+                return;
+            }
+            fwrite($fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"?>\n");
+            fwrite($fp, "<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
 
             foreach ($sitemaps as $sitemap) {
-                echo "  <sitemap>\n";
-                echo '    <loc>' . htmlspecialchars($sitemap['loc'], ENT_QUOTES | ENT_XML1, 'UTF-8') . "</loc>\n";
+                fwrite($fp, "  <sitemap>\n");
+                fwrite($fp, '    <loc>' . htmlspecialchars($sitemap['loc'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</loc>\n");
                 if (!empty($sitemap['lastmod'])) {
-                    echo '    <lastmod>' . htmlspecialchars($sitemap['lastmod'], ENT_QUOTES | ENT_XML1, 'UTF-8') . "</lastmod>\n";
+                    fwrite($fp, '    <lastmod>' . htmlspecialchars($sitemap['lastmod'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</lastmod>\n");
                 }
-                echo "  </sitemap>\n";
+                fwrite($fp, "  </sitemap>\n");
             }
 
-            echo "</sitemapindex>\n";
+            fwrite($fp, "</sitemapindex>\n");
+            fclose($fp);
         });
 
         $response->headers->set('Content-Type', 'application/xml; charset=UTF-8');
@@ -85,13 +90,18 @@ class SitemapController
         $xslUrl = $this->urlGenerator->getXslUrl();
 
         $response = new StreamedResponse(function () use ($boardUrl, $xslUrl) {
-            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-            echo "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_XML1, 'UTF-8') . "\"?>\n";
-            echo "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
-            echo "  <url>\n";
-            echo '    <loc>' . htmlspecialchars($boardUrl, ENT_QUOTES | ENT_XML1, 'UTF-8') . "</loc>\n";
-            echo "  </url>\n";
-            echo "</urlset>\n";
+            $fp = fopen('php://output', 'wb');
+            if ($fp === false) {
+                return;
+            }
+            fwrite($fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"?>\n");
+            fwrite($fp, "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+            fwrite($fp, "  <url>\n");
+            fwrite($fp, '    <loc>' . htmlspecialchars($boardUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</loc>\n");
+            fwrite($fp, "  </url>\n");
+            fwrite($fp, "</urlset>\n");
+            fclose($fp);
         });
 
         $response->headers->set('Content-Type', 'application/xml; charset=UTF-8');
@@ -113,21 +123,26 @@ class SitemapController
         $xslUrl = $this->urlGenerator->getXslUrl();
 
         $response = new StreamedResponse(function () use ($forums, $xslUrl) {
-            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-            echo "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_XML1, 'UTF-8') . "\"?>\n";
-            echo "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
+            $fp = fopen('php://output', 'wb');
+            if ($fp === false) {
+                return;
+            }
+            fwrite($fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"?>\n");
+            fwrite($fp, "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
 
             foreach ($forums as $forum) {
                 $url = $this->urlGenerator->generateForumUrl($forum['forum_id'], $forum['slug']);
-                echo "  <url>\n";
-                echo '    <loc>' . htmlspecialchars($url, ENT_QUOTES | ENT_XML1, 'UTF-8') . "</loc>\n";
+                fwrite($fp, "  <url>\n");
+                fwrite($fp, '    <loc>' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</loc>\n");
                 if ($forum['lastmod'] > 0) {
-                    echo '    <lastmod>' . gmdate('Y-m-d\TH:i:s\Z', $forum['lastmod']) . "</lastmod>\n";
+                    fwrite($fp, '    <lastmod>' . gmdate('Y-m-d\TH:i:s\Z', $forum['lastmod']) . "</lastmod>\n");
                 }
-                echo "  </url>\n";
+                fwrite($fp, "  </url>\n");
             }
 
-            echo "</urlset>\n";
+            fwrite($fp, "</urlset>\n");
+            fclose($fp);
         });
 
         $response->headers->set('Content-Type', 'application/xml; charset=UTF-8');
@@ -160,21 +175,26 @@ class SitemapController
         $xslUrl = $this->urlGenerator->getXslUrl();
 
         $response = new StreamedResponse(function () use ($repository, $urlGenerator, $xslUrl, $page, $chunkSize) {
-            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-            echo "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_XML1, 'UTF-8') . "\"?>\n";
-            echo "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
+            $fp = fopen('php://output', 'wb');
+            if ($fp === false) {
+                return;
+            }
+            fwrite($fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"?>\n");
+            fwrite($fp, "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
 
-            $repository->streamTopics($page, $chunkSize, function (int $topicId, string $slug, int $lastmod) use ($urlGenerator) {
+            $repository->streamTopics($page, $chunkSize, function (int $topicId, string $slug, int $lastmod) use ($urlGenerator, $fp) {
                 $url = $urlGenerator->generateTopicUrl($topicId, $slug);
-                echo "  <url>\n";
-                echo '    <loc>' . htmlspecialchars($url, ENT_QUOTES | ENT_XML1, 'UTF-8') . "</loc>\n";
+                fwrite($fp, "  <url>\n");
+                fwrite($fp, '    <loc>' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</loc>\n");
                 if ($lastmod > 0) {
-                    echo '    <lastmod>' . gmdate('Y-m-d\TH:i:s\Z', $lastmod) . "</lastmod>\n";
+                    fwrite($fp, '    <lastmod>' . gmdate('Y-m-d\TH:i:s\Z', $lastmod) . "</lastmod>\n");
                 }
-                echo "  </url>\n";
+                fwrite($fp, "  </url>\n");
             });
 
-            echo "</urlset>\n";
+            fwrite($fp, "</urlset>\n");
+            fclose($fp);
         });
 
         $response->headers->set('Content-Type', 'application/xml; charset=UTF-8');

@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace phpbbseo\framework\Redirect;
 
+if (!defined('IN_PHPBB')) {
+    exit;
+}
+
 /**
  * Explains why a redirect was decided.
  */
