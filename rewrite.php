@@ -114,14 +114,29 @@ $nativeScriptMap = [
     'viewtopic.php'     => 'viewtopic.php',
     'viewforum.php'     => 'viewforum.php',
     'memberlist.php'    => 'memberlist.php',
+    'search.php'        => 'search.php',
+    'viewonline.php'    => 'viewonline.php',
+    'index.php'         => 'index.php',
 ];
 
-if (preg_match('#(?:^|/)(adm/index\.php|download/file\.php|file\.php|posting\.php|mcp\.php|ucp\.php|report\.php|cron\.php|viewtopic\.php|viewforum\.php|memberlist\.php)$#i', $path, $nativeMatch)) {
+if (preg_match('#(?:^|/)(adm/index\.php|download/file\.php|file\.php|posting\.php|mcp\.php|ucp\.php|report\.php|cron\.php|viewtopic\.php|viewforum\.php|memberlist\.php|search\.php|viewonline\.php|index\.php)$#i', $path, $nativeMatch)) {
     $matchedKey = strtolower($nativeMatch[1]);
     if (isset($nativeScriptMap[$matchedKey])) {
         $targetScript = $nativeScriptMap[$matchedKey];
+        $canonicalScript = ($boardDir !== '') ? $boardDir . '/' . $targetScript : '/' . $targetScript;
+
+        // If accessed with a deep/relative prefix (e.g. /member/slug-101/adm/index.php or /topic/.../ucp.php),
+        // redirect immediately to the canonical root script so the browser URL is corrected.
+        if ($path !== '/' . $targetScript && $targetScript !== 'download/file.php') {
+            $queryString = !empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '';
+            $statusCode = (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') ? 307 : 301;
+            header('Cache-Control: no-cache, must-revalidate');
+            header('Location: ' . $canonicalScript . $queryString, true, $statusCode);
+            exit;
+        }
+
         if (is_file($phpbbRootPath . $targetScript)) {
-            $internalScript = ($boardDir !== '') ? $boardDir . '/' . $targetScript : '/' . $targetScript;
+            $internalScript = $canonicalScript;
             $internalQuery = http_build_query($_GET);
             $_SERVER['SCRIPT_NAME']     = $internalScript;
             $_SERVER['PHP_SELF']        = $internalScript;

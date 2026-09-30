@@ -80,6 +80,7 @@ class SeoListener implements EventSubscriberInterface
             'core.approve_posts_after'                  => 'onApprovePostsAfter',
             // Root-relative asset path normalization on deep SEO URLs
             'core.page_header_after'                    => 'onPageHeaderAfter',
+            'core.page_footer_after'                    => 'onPageFooterAfter',
         ];
     }
 
@@ -624,6 +625,12 @@ class SeoListener implements EventSubscriberInterface
         $page = (string) ($event['url'] ?? '');
         $normalizedPage = str_replace('\\', '/', $page);
         if (preg_match('#(?:^|/)(adm/|mcp\.php|ucp\.php)#i', $normalizedPage)) {
+            // Root-prefix native administrative and control panel endpoints on the frontend
+            $boardPath = $this->urlResolver->getBoardPath();
+            if (!str_starts_with($page, '/') && !preg_match('#^(https?:)?//#i', $page)) {
+                $cleanUrl = preg_replace('#^\./#', '', $page);
+                $event['url'] = $boardPath . $cleanUrl;
+            }
             return;
         }
 
@@ -646,6 +653,14 @@ class SeoListener implements EventSubscriberInterface
 
         if ($seoUrl !== null) {
             $event['append_sid_overwrite'] = $seoUrl;
+        } else {
+            // For other native public endpoints not rewritten to SEO URLs,
+            // root-prefix the URL so relative resolution from deep SEO paths does not occur.
+            $boardPath = $this->urlResolver->getBoardPath();
+            if (!str_starts_with($page, '/') && !preg_match('#^(https?:)?//#i', $page)) {
+                $cleanUrl = preg_replace('#^\./#', '', $page);
+                $event['url'] = $boardPath . $cleanUrl;
+            }
         }
     }
 
@@ -848,9 +863,7 @@ class SeoListener implements EventSubscriberInterface
             return;
         }
 
-        $boardUrl = generate_board_url();
-        $path = parse_url($boardUrl, PHP_URL_PATH) ?? '';
-        $boardPath = rtrim($path, '/') . '/';
+        $boardPath = $this->urlResolver->getBoardPath();
 
         $stylePath = rawurlencode($this->user->style['style_path'] ?? 'prosilver');
         $langName = rawurlencode($this->user->lang_name ?? 'en');
@@ -881,5 +894,58 @@ class SeoListener implements EventSubscriberInterface
             'T_FONT_AWESOME_LINK'    => $fontAwesomeLink,
             'T_JQUERY_LINK'          => $jqueryLink,
         ]);
+
+        $urlVars = [
+            'S_LOGIN_ACTION',
+            'U_REGISTER',
+            'U_LOGIN_LOGOUT',
+            'U_MCP',
+            'U_MODCP',
+            'U_PRIVACY',
+            'UA_PRIVACY',
+            'U_TERMS_USE',
+            'U_SEARCH',
+            'U_VIEWONLINE',
+            'U_INDEX',
+            'U_PROFILE',
+            'U_PRIVATEMSGS',
+            'U_RETURN_INBOX',
+            'U_NOTIFICATION_SETTINGS',
+            'U_VIEW_ALL_NOTIFICATIONS',
+            'U_MARK_ALL_NOTIFICATIONS',
+            'U_RESTORE_PERMISSIONS',
+            'U_SEARCH_SELF',
+            'U_SEARCH_NEW',
+            'U_SEARCH_UNANSWERED',
+            'U_SEARCH_UNREAD',
+            'U_SEARCH_ACTIVE_TOPICS',
+            'U_CONTACT_US',
+            'U_TEAM',
+        ];
+        $updates = [];
+        foreach ($urlVars as $varName) {
+            $val = $this->template->retrieve_var($varName);
+            if (is_string($val) && $val !== '' && !str_starts_with($val, '/') && !preg_match('#^(https?:)?//#i', $val)) {
+                $cleanVal = preg_replace('#^\./#', '', $val);
+                $updates[$varName] = $boardPath . $cleanVal;
+            }
+        }
+        if (!empty($updates)) {
+            $this->template->assign_vars($updates);
+        }
+    }
+
+    public function onPageFooterAfter($event): void
+    {
+        if (!$this->configProvider->isRewriteEnabled() || defined('ADMIN_START') || defined('IN_ADMIN') || defined('IN_CRON') || defined('IN_INSTALL')) {
+            return;
+        }
+
+        $uAcp = $this->template->retrieve_var('U_ACP');
+        if (is_string($uAcp) && $uAcp !== '' && !str_starts_with($uAcp, '/') && !preg_match('#^(https?:)?//#i', $uAcp)) {
+            $boardPath = $this->urlResolver->getBoardPath();
+            $cleanAcp = preg_replace('#^\./#', '', $uAcp);
+            $this->template->assign_var('U_ACP', $boardPath . $cleanAcp);
+        }
     }
 }
