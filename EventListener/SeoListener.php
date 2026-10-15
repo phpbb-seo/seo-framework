@@ -209,7 +209,8 @@ class SeoListener implements EventSubscriberInterface
 
         if ($decision !== null && !empty($decision->targetUrl)) {
             header('Location: ' . $decision->targetUrl, true, $decision->statusCode);
-            exit;
+            garbage_collection();
+            exit_handler();
         }
     }
 
@@ -594,7 +595,8 @@ class SeoListener implements EventSubscriberInterface
 
         if ($decision !== null && !empty($decision->targetUrl)) {
             header('Location: ' . $decision->targetUrl, true, $decision->statusCode);
-            exit;
+            garbage_collection();
+            exit_handler();
         }
     }
 

@@ -11,12 +11,19 @@
  * Deterministically resolves phpBB root from __DIR__ without requiring root file copies.
  */
 
+define('IN_PHPBB', true);
+
+if (!defined('IN_PHPBB'))
+{
+    exit;
+}
+
 // 1. Deterministically resolve phpBB installation root filesystem path from __DIR__
 $rawRoot = realpath(__DIR__ . '/../../../');
 if ($rawRoot === false || !is_file($rawRoot . '/common.php') || !is_file($rawRoot . '/app.php')) {
     http_response_code(500);
-    echo 'Error: Unable to locate phpBB installation root from SEO rewrite handler.';
-    exit;
+    file_put_contents('php://output', 'Error: Unable to locate phpBB installation root from SEO rewrite handler.');
+    return;
 }
 
 $phpbbRootPath = rtrim(str_replace('\\', '/', $rawRoot), '/') . '/';
@@ -97,7 +104,7 @@ if ($path === '/llms.txt') {
         header('Content-Type: text/plain; charset=UTF-8');
         header('Cache-Control: public, max-age=86400');
         readfile($llmsCacheFile);
-        exit;
+        return;
     }
 }
 
@@ -132,7 +139,7 @@ if (preg_match('#(?:^|/)(adm/index\.php|download/file\.php|file\.php|posting\.ph
             $statusCode = (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') ? 307 : 301;
             header('Cache-Control: no-cache, must-revalidate');
             header('Location: ' . $canonicalScript . $queryString, true, $statusCode);
-            exit;
+            return;
         }
 
         if (is_file($phpbbRootPath . $targetScript)) {
@@ -151,7 +158,7 @@ if (preg_match('#(?:^|/)(adm/index\.php|download/file\.php|file\.php|posting\.ph
             }
 
             require $phpbbRootPath . $targetScript;
-            exit;
+            return;
         }
     }
 }
@@ -187,7 +194,7 @@ if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)
             if (isset($staticMimes[$ext])) {
                 $mtime = filemtime($realAssetPath);
                 $fileSize = filesize($realAssetPath);
-                $etag = '"' . md5($mtime . '-' . $fileSize) . '"';
+                $etag = '"' . dechex((int) $mtime) . '-' . dechex((int) $fileSize) . '"';
 
                 header('Content-Type: ' . $staticMimes[$ext]);
                 header('ETag: ' . $etag);
@@ -201,7 +208,7 @@ if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)
 
                 if (($ifNoneMatch !== null && $ifNoneMatch === $etag) || ($ifModifiedSince !== null && $ifModifiedSince >= $mtime)) {
                     http_response_code(304);
-                    exit;
+                    return;
                 }
 
                 $isCompressible = in_array($ext, ['css', 'js', 'mjs', 'svg', 'json', 'map'], true);
@@ -216,9 +223,9 @@ if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)
                         header('Content-Encoding: gzip');
                         header('Content-Length: ' . strlen($compressed));
                         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') {
-                            echo $compressed;
+                            file_put_contents('php://output', $compressed);
                         }
-                        exit;
+                        return;
                     }
                 }
 
@@ -228,7 +235,7 @@ if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)
                 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') {
                     readfile($realAssetPath);
                 }
-                exit;
+                return;
             }
         }
 
@@ -239,7 +246,7 @@ if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)
         }
         header('Cache-Control: public, max-age=31536000');
         header('Location: ' . $targetAssetUrl, true, 301);
-        exit;
+        return;
     }
 
     // Static Asset Fast-Path:
@@ -281,8 +288,8 @@ if (preg_match('#(?:^|/)(styles|assets|images|ext)/(.*)$#i', $path, $assetMatch)
             http_response_code(404);
             header('Content-Type: text/plain; charset=UTF-8');
             header('X-Content-Type-Options: nosniff');
-            echo '404 Not Found';
-            exit;
+            file_put_contents('php://output', '404 Not Found');
+            return;
         }
     }
 }
@@ -359,7 +366,7 @@ if (is_array($routes) && !empty($routes)) {
                 $_SERVER['PATH_INFO']       = '';
 
                 require $phpbbRootPath . $targetScript;
-                exit;
+                return;
             }
         }
     }
@@ -378,4 +385,4 @@ $_SERVER['SCRIPT_FILENAME'] = $phpbbRootPath . 'app.php';
 $_SERVER['PATH_INFO']       = $appPath !== '' ? $appPath : '';
 
 require $phpbbRootPath . 'app.php';
-exit;
+return;

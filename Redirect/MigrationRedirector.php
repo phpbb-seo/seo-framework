@@ -788,7 +788,8 @@ class MigrationRedirector implements EventSubscriberInterface
         header('HTTP/1.1 301 Moved Permanently', true, 301);
         header('Location: ' . $targetUrl, true, 301);
         header('X-Redirect-By: phpBB-SEO-Migration-301');
-        exit;
+        garbage_collection();
+        exit_handler();
     }
 
     // Testing API

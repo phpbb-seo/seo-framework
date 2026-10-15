@@ -55,14 +55,14 @@ class SitemapController
                 return;
             }
             fwrite($fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"?>\n");
+            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . utf8_htmlspecialchars($xslUrl) . "\"?>\n");
             fwrite($fp, "<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
 
             foreach ($sitemaps as $sitemap) {
                 fwrite($fp, "  <sitemap>\n");
-                fwrite($fp, '    <loc>' . htmlspecialchars($sitemap['loc'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</loc>\n");
+                fwrite($fp, '    <loc>' . utf8_htmlspecialchars($sitemap['loc']) . "</loc>\n");
                 if (!empty($sitemap['lastmod'])) {
-                    fwrite($fp, '    <lastmod>' . htmlspecialchars($sitemap['lastmod'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</lastmod>\n");
+                    fwrite($fp, '    <lastmod>' . utf8_htmlspecialchars($sitemap['lastmod']) . "</lastmod>\n");
                 }
                 fwrite($fp, "  </sitemap>\n");
             }
@@ -95,10 +95,10 @@ class SitemapController
                 return;
             }
             fwrite($fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"?>\n");
+            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . utf8_htmlspecialchars($xslUrl) . "\"?>\n");
             fwrite($fp, "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
             fwrite($fp, "  <url>\n");
-            fwrite($fp, '    <loc>' . htmlspecialchars($boardUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</loc>\n");
+            fwrite($fp, '    <loc>' . utf8_htmlspecialchars($boardUrl) . "</loc>\n");
             fwrite($fp, "  </url>\n");
             fwrite($fp, "</urlset>\n");
             fclose($fp);
@@ -128,13 +128,13 @@ class SitemapController
                 return;
             }
             fwrite($fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"?>\n");
+            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . utf8_htmlspecialchars($xslUrl) . "\"?>\n");
             fwrite($fp, "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
 
             foreach ($forums as $forum) {
                 $url = $this->urlGenerator->generateForumUrl($forum['forum_id'], $forum['slug']);
                 fwrite($fp, "  <url>\n");
-                fwrite($fp, '    <loc>' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</loc>\n");
+                fwrite($fp, '    <loc>' . utf8_htmlspecialchars($url) . "</loc>\n");
                 if ($forum['lastmod'] > 0) {
                     fwrite($fp, '    <lastmod>' . gmdate('Y-m-d\TH:i:s\Z', $forum['lastmod']) . "</lastmod>\n");
                 }
@@ -180,13 +180,13 @@ class SitemapController
                 return;
             }
             fwrite($fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . htmlspecialchars($xslUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"?>\n");
+            fwrite($fp, "<?xml-stylesheet type=\"text/xsl\" href=\"" . utf8_htmlspecialchars($xslUrl) . "\"?>\n");
             fwrite($fp, "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
 
             $repository->streamTopics($page, $chunkSize, function (int $topicId, string $slug, int $lastmod) use ($urlGenerator, $fp) {
                 $url = $urlGenerator->generateTopicUrl($topicId, $slug);
                 fwrite($fp, "  <url>\n");
-                fwrite($fp, '    <loc>' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</loc>\n");
+                fwrite($fp, '    <loc>' . utf8_htmlspecialchars($url) . "</loc>\n");
                 if ($lastmod > 0) {
                     fwrite($fp, '    <lastmod>' . gmdate('Y-m-d\TH:i:s\Z', $lastmod) . "</lastmod>\n");
                 }

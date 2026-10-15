@@ -510,10 +510,10 @@ class main_module
         }
 
         if ($request->is_set_post('action_backfill_step')) {
+            $jsonResponse = new \phpbb\json_response();
             if (!check_form_key('pseo_sitemap_rebuild')) {
-                $response = new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => $user->lang('FORM_INVALID')], 400);
-                $response->send();
-                exit;
+                http_response_code(400);
+                $jsonResponse->send(['success' => false, 'error' => $user->lang('FORM_INVALID')]);
             }
 
             /** @var \phpbbseo\framework\Backfill\SlugBackfillManager $backfillManager */
@@ -523,7 +523,7 @@ class main_module
 
             try {
                 $res = $backfillManager->backfillBatch('topic', $lastId, $batchSize, true);
-                $response = new \Symfony\Component\HttpFoundation\JsonResponse([
+                $jsonResponse->send([
                     'success'   => true,
                     'processed' => $res->processed,
                     'last_id'   => $res->lastId,
@@ -531,16 +531,12 @@ class main_module
                     'completed' => $res->completed,
                     'elapsed'   => $res->elapsed,
                 ]);
-                $response->send();
-                exit;
             } catch (\phpbbseo\framework\Backfill\Exception\BackfillLockException $e) {
-                $response = new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => $e->getMessage(), 'locked' => true], 409);
-                $response->send();
-                exit;
+                http_response_code(409);
+                $jsonResponse->send(['success' => false, 'error' => $e->getMessage(), 'locked' => true]);
             } catch (\Throwable $e) {
-                $response = new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
-                $response->send();
-                exit;
+                http_response_code(500);
+                $jsonResponse->send(['success' => false, 'error' => $e->getMessage()]);
             }
         }
 
