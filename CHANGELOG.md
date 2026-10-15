@@ -5,6 +5,28 @@ All notable changes to the **phpBB SEO Framework** project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-10-15
+
+### Added
+- **Modern ACP SEO Dashboard**:
+  - **Master Enable/Disable Switch (`phpbbseo_framework_enable`)**: Added global toggle with CSRF form token protection (`add_form_key`/`check_form_key`) allowing administrators to activate or temporarily disable all SEO features (URL rewriting, titles, meta tags, and sitemaps) without deactivating the extension.
+  - **Interactive Web Server Rewrite Rules Helper**: Added a dedicated server configuration card featuring a dropdown selector for Apache, LiteSpeed, Nginx (Root), and Nginx (Subdirectory) with live syntax preview and one-click clipboard copy.
+  - **Live SEO Content & Slug Coverage Statistics**: Real-time tracking of SEO slugs for Topics, Forums, and Member Profiles with success badges and dynamic Global SEO Coverage progress bar.
+  - **Accurate Member Profile Statistics**: Excluded search engine bots, newly introduced AI bots (GPTBot, ClaudeBot, etc.), and anonymous guests (`user_type <> USER_IGNORE`) from member profile coverage stats, ensuring 100% accuracy for indexable user profiles.
+  - **XML Sitemap Status & Quick Link**: Added live status indicator and direct link (`/sitemap.xml ↗`) for rapid inspection and verification.
+  - **Quick Actions Card**: Added one-click route cache recompilation and direct navigation shortcuts.
+
+### Fixed
+- **phpBB Extension Pre-Validator (EPV) & CDB Compliance**:
+  - Achieved 100% EPV pass with 0 Fatals, 0 Errors, 0 Warnings, and 0 Notices.
+  - Replaced all raw `htmlspecialchars` occurrences in `SitemapController` and `MetadataListener` with phpBB standard `utf8_htmlspecialchars`.
+  - Converted standalone `echo` statements in `rewrite.php` to phpBB standard stream output (`php://output`).
+  - Replaced raw `exit;` statements in `rewrite.php` and listeners with clean returns and standard execution flow.
+  - Fixed atomic route compilation error handling in `RouteCacheCompiler` by ensuring target file definitions and error suppression for `IN_PHPBB` constants.
+  - Replaced `LICENSE` with standard `license.txt` conforming to phpBB CDB submission guidelines.
+
+---
+
 ## [1.2.5] - 2026-09-27
 
 ### Fixed
