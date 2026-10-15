@@ -58,52 +58,161 @@
 </div>
 <!-- ENDIF -->
 
+<!-- Master Settings Card -->
 <div class="pseo-card">
 	<div class="pseo-card-header">
-		<h2 class="pseo-card-title">{L_SEO_STATUS_OVERVIEW}</h2>
+		<h2 class="pseo-card-title">{L_SEO_GENERAL_SETTINGS}</h2>
+		<!-- IF S_SEO_FRAMEWORK_ENABLE -->
+			<span class="pseo-badge pseo-badge--success">{L_SEO_ENABLED}</span>
+		<!-- ELSE -->
+			<span class="pseo-badge pseo-badge--warning">{L_SEO_DISABLED}</span>
+		<!-- ENDIF -->
+	</div>
+	<div class="pseo-card-body">
+		<form method="post" action="{U_ACTION_DASHBOARD}">
+			<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+				<div>
+					<div style="font-weight: 700; font-size: 13.5px; color: var(--pseo-color-text-main);">{L_SEO_ENABLE_FRAMEWORK}</div>
+					<div style="font-size: 12px; color: var(--pseo-color-text-muted); margin-top: 3px;">{L_SEO_ENABLE_FRAMEWORK_EXPLAIN}</div>
+				</div>
+				<div style="display: flex; align-items: center; gap: 14px;">
+					<label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 600;">
+						<input type="radio" name="phpbbseo_framework_enable" value="1" <!-- IF S_SEO_FRAMEWORK_ENABLE -->checked="checked"<!-- ENDIF --> />
+						<span>{L_ENABLED}</span>
+					</label>
+					<label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 600;">
+						<input type="radio" name="phpbbseo_framework_enable" value="0" <!-- IF not S_SEO_FRAMEWORK_ENABLE -->checked="checked"<!-- ENDIF --> />
+						<span>{L_DISABLED}</span>
+					</label>
+					<input type="submit" name="submit_general" value="{L_SUBMIT}" class="pseo-btn pseo-btn--primary" style="margin-inline-start: 8px;" />
+				</div>
+			</div>
+			{S_FORM_TOKEN}
+		</form>
+	</div>
+</div>
+
+<!-- SEO Content & Slug Coverage Statistics -->
+<div class="pseo-card">
+	<div class="pseo-card-header">
+		<h2 class="pseo-card-title">{L_SEO_COVERAGE_TITLE}</h2>
 		<span class="pseo-badge pseo-badge--neutral">{L_SEO_EDITION_LITE}</span>
 	</div>
 	<div class="pseo-card-body">
 		<div class="pseo-grid-stats">
 			<div class="pseo-stat-item">
-				<span class="pseo-stat-label">{L_SEO_STATUS_FRAMEWORK}</span>
+				<span class="pseo-stat-label">{L_SEO_STAT_TOPICS_COVERED}</span>
 				<div class="pseo-stat-value">
-					<!-- IF S_SEO_ENABLED -->
-						<span class="pseo-badge pseo-badge--success">{L_SEO_ENABLED}</span>
-					<!-- ELSE -->
-						<span class="pseo-badge pseo-badge--warning">{L_SEO_DISABLED}</span>
-					<!-- ENDIF -->
+					<span>{STAT_TOPIC_SLUGS}</span>
+					<span style="font-size: 11.5px; font-weight: normal; color: var(--pseo-color-text-muted);">/ {STAT_TOTAL_TOPICS}</span>
+					<span class="pseo-badge pseo-badge--success" style="margin-inline-start: auto;">{STAT_TOPIC_COVERAGE}%</span>
 				</div>
 			</div>
 
 			<div class="pseo-stat-item">
-				<span class="pseo-stat-label">{L_SEO_STATUS_REWRITE}</span>
+				<span class="pseo-stat-label">{L_SEO_STAT_FORUMS_COVERED}</span>
 				<div class="pseo-stat-value">
-					<!-- IF S_REWRITE_ENABLED -->
-						<span class="pseo-badge pseo-badge--success">{L_SEO_ACTIVE}</span>
-					<!-- ELSE -->
-						<span class="pseo-badge pseo-badge--neutral">{L_SEO_INACTIVE}</span>
-					<!-- ENDIF -->
+					<span>{STAT_FORUM_SLUGS}</span>
+					<span style="font-size: 11.5px; font-weight: normal; color: var(--pseo-color-text-muted);">/ {STAT_TOTAL_FORUMS}</span>
+					<span class="pseo-badge pseo-badge--success" style="margin-inline-start: auto;">{STAT_FORUM_COVERAGE}%</span>
 				</div>
 			</div>
 
 			<div class="pseo-stat-item">
-				<span class="pseo-stat-label">{L_SEO_STATUS_CANONICAL}</span>
+				<span class="pseo-stat-label">{L_SEO_STAT_MEMBERS_COVERED}</span>
 				<div class="pseo-stat-value">
-					<span class="pseo-badge pseo-badge--success">{L_SEO_ACTIVE}</span>
+					<span>{STAT_MEMBER_SLUGS}</span>
+					<span style="font-size: 11.5px; font-weight: normal; color: var(--pseo-color-text-muted);">/ {STAT_TOTAL_USERS}</span>
+					<span class="pseo-badge pseo-badge--success" style="margin-inline-start: auto;">{STAT_MEMBER_COVERAGE}%</span>
 				</div>
 			</div>
 
 			<div class="pseo-stat-item">
-				<span class="pseo-stat-label">{L_SEO_STATUS_SLUG_INDEX}</span>
-				<div class="pseo-stat-value">
-					<span class="pseo-badge pseo-badge--success">{L_SEO_AVAILABLE}</span>
+				<span class="pseo-stat-label">{L_SEO_STAT_GLOBAL_COVERAGE}</span>
+				<div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+					<div style="flex: 1; height: 10px; background: var(--pseo-color-border); border-radius: 6px; overflow: hidden;">
+						<div style="width: {STAT_GLOBAL_COVERAGE}%; height: 100%; background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);"></div>
+					</div>
+					<span style="font-size: 12px; font-weight: 700; color: #16a34a;">{STAT_GLOBAL_COVERAGE}%</span>
 				</div>
 			</div>
 		</div>
 	</div>
 </div>
 
+<!-- Web Server Rewrite Rules Helper Card -->
+<div class="pseo-card">
+	<div class="pseo-card-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+		<div style="display: flex; align-items: center; gap: 8px;">
+			<span style="font-size: 17px;">🖥️</span>
+			<h2 class="pseo-card-title">{L_SEO_WEB_SERVER_TITLE}</h2>
+		</div>
+		<div style="display: flex; align-items: center; gap: 8px;">
+			<label for="pseo_webserver_select" style="font-size: 12.5px; font-weight: 600; color: var(--pseo-color-text-muted);">{L_SEO_WEB_SERVER_SELECT}</label>
+			<select id="pseo_webserver_select" style="padding: 5px 12px; border-radius: var(--pseo-radius-md); border: 1px solid var(--pseo-color-border); font-size: 12.5px; background: var(--pseo-color-surface); color: var(--pseo-color-text-main); font-weight: 600;">
+				<option value="apache">Apache (.htaccess)</option>
+				<option value="litespeed">LiteSpeed</option>
+				<option value="nginx_root">Nginx (Root)</option>
+				<option value="nginx_sub">Nginx (Subdirectory: {BOARD_SUBDIR})</option>
+			</select>
+		</div>
+	</div>
+	<div class="pseo-card-body">
+		<div style="background: var(--pseo-color-surface-subtle); border: 1px solid var(--pseo-color-border); border-radius: var(--pseo-radius-md); padding: 14px;">
+			<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+				<div style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px;">
+					<span style="color: var(--pseo-color-primary); font-family: var(--pseo-font-mono);">&lt;/&gt;</span>
+					<span>{L_SEO_REWRITE_RULES_TITLE}</span>
+				</div>
+				<button type="button" id="pseo_copy_rewrite_btn" class="pseo-btn pseo-btn--secondary" style="padding: 4px 14px; font-size: 12px; font-weight: 600;">
+					{L_SEO_REWRITE_COPY}
+				</button>
+			</div>
+
+			<p id="pseo_rewrite_explain" style="margin: 0 0 10px; font-size: 12px; color: var(--pseo-color-text-muted); line-height: 1.5;">
+				{L_SEO_REWRITE_APACHE_EXPLAIN}
+			</p>
+
+			<textarea id="pseo_rewrite_textarea" readonly="readonly" rows="6" class="pseo-input-text" style="width: 100%; font-family: var(--pseo-font-mono); font-size: 12px; background: #0f172a; color: #f8fafc; border-radius: var(--pseo-radius-md); resize: vertical; padding: 10px 14px; line-height: 1.5; border: 1px solid #1e293b;">{REWRITE_APACHE}</textarea>
+
+			<!-- Hidden templates for live server switching -->
+			<div id="pseo_raw_apache" style="display: none;" data-explain="{L_SEO_REWRITE_APACHE_EXPLAIN}">{REWRITE_APACHE}</div>
+			<div id="pseo_raw_litespeed" style="display: none;" data-explain="{L_SEO_REWRITE_APACHE_EXPLAIN}">{REWRITE_APACHE}</div>
+			<div id="pseo_raw_nginx_root" style="display: none;" data-explain="{L_SEO_REWRITE_NGINX_ROOT_EXPLAIN}">{REWRITE_NGINX_ROOT}</div>
+			<div id="pseo_raw_nginx_sub" style="display: none;" data-explain="{L_SEO_REWRITE_NGINX_SUB_EXPLAIN}">{REWRITE_NGINX_SUB}</div>
+		</div>
+	</div>
+</div>
+
+<!-- XML Sitemap Status & Quick Test -->
+<div class="pseo-card">
+	<div class="pseo-card-header">
+		<h2 class="pseo-card-title">{L_SEO_SITEMAP_QUICK_TITLE}</h2>
+		<!-- IF S_SITEMAP_ENABLED -->
+			<span class="pseo-badge pseo-badge--success">{L_SEO_ACTIVE}</span>
+		<!-- ELSE -->
+			<span class="pseo-badge pseo-badge--neutral">{L_SEO_INACTIVE}</span>
+		<!-- ENDIF -->
+	</div>
+	<div class="pseo-card-body">
+		<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+			<div>
+				<div style="font-size: 12.5px; font-weight: 600; color: var(--pseo-color-text-main);">{L_SEO_SITEMAP_INDEX_URL}</div>
+				<div style="font-size: 12px; color: var(--pseo-color-text-muted); margin-top: 2px;">{L_SEO_SITEMAP_QUICK_EXPLAIN}</div>
+			</div>
+			<div style="display: flex; align-items: center; gap: 8px;">
+				<a href="{SITEMAP_URL}" target="_blank" rel="noopener noreferrer" class="pseo-btn pseo-btn--secondary">
+					{L_SEO_VIEW_SITEMAP} &#8599;
+				</a>
+				<a href="{U_ACTION_SITEMAP}" class="pseo-btn pseo-btn--primary">
+					{L_SEO_NAV_SITEMAP}
+				</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Active Permalinks Patterns -->
 <div class="pseo-card">
 	<div class="pseo-card-header">
 		<h2 class="pseo-card-title">{L_SEO_CURRENT_PATTERNS}</h2>
@@ -130,5 +239,70 @@
 		</div>
 	</div>
 </div>
+
+<!-- Quick Actions Card -->
+<div class="pseo-card">
+	<div class="pseo-card-header">
+		<h2 class="pseo-card-title">{L_SEO_QUICK_ACTIONS}</h2>
+		<span class="pseo-badge pseo-badge--neutral">{L_SEO_EDITION_LITE}</span>
+	</div>
+	<div class="pseo-card-body">
+		<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+			<form method="post" action="{U_ACTION_DASHBOARD}" style="margin: 0;">
+				<input type="submit" name="action_recompile_cache" value="{L_SEO_ACTION_RECOMPILE_CACHE}" class="pseo-btn pseo-btn--secondary" />
+				{S_FORM_TOKEN}
+			</form>
+			<a href="{U_ACTION_PERMALINKS}" class="pseo-btn pseo-btn--secondary">{L_SEO_MANAGE_PERMALINKS}</a>
+			<a href="{U_ACTION_TITLES_META}" class="pseo-btn pseo-btn--secondary">{L_SEO_NAV_TITLES}</a>
+			<a href="{U_ACTION_SITEMAP}" class="pseo-btn pseo-btn--secondary">{L_SEO_NAV_SITEMAP}</a>
+		</div>
+	</div>
+</div>
+
+<script>
+(function() {
+	var select = document.getElementById('pseo_webserver_select');
+	var textarea = document.getElementById('pseo_rewrite_textarea');
+	var explain = document.getElementById('pseo_rewrite_explain');
+	var copyBtn = document.getElementById('pseo_copy_rewrite_btn');
+
+	if (!select || !textarea) return;
+
+	select.addEventListener('change', function() {
+		var val = select.value;
+		var rawEl = document.getElementById('pseo_raw_' + val);
+		if (rawEl) {
+			textarea.value = rawEl.textContent.trim();
+			if (explain && rawEl.getAttribute('data-explain')) {
+				explain.textContent = rawEl.getAttribute('data-explain');
+			}
+		}
+	});
+
+	if (copyBtn) {
+		copyBtn.addEventListener('click', function() {
+			textarea.select();
+			try {
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(textarea.value);
+				} else {
+					document.execCommand('copy');
+				}
+				var origText = copyBtn.textContent;
+				copyBtn.textContent = '{L_SEO_REWRITE_COPIED}';
+				copyBtn.style.background = 'var(--pseo-color-success)';
+				copyBtn.style.color = '#ffffff';
+				setTimeout(function() {
+					copyBtn.textContent = origText;
+					copyBtn.style.background = '';
+					copyBtn.style.color = '';
+				}, 2000);
+			} catch (e) {
+				// fallback silent
+			}
+		});
+	}
+})();
+</script>
 
 <!-- INCLUDE @phpbbseo_framework/acp_seo_footer.html -->

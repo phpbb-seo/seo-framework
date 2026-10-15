@@ -38,6 +38,8 @@ $lang = array_merge($lang, [
     // Dashboard View
     'SEO_DASHBOARD_TITLE'            => 'SEO Framework Dashboard',
     'SEO_GENERAL_SETTINGS'           => 'General Settings',
+    'SEO_ENABLE_FRAMEWORK'           => 'Enable SEO Framework',
+    'SEO_ENABLE_FRAMEWORK_EXPLAIN'   => 'Master switch to activate or temporarily disable all SEO framework features (URL rewrites, titles, meta tags, and XML sitemaps).',
     'SEO_DASHBOARD_SAVED'            => 'Dashboard settings have been updated successfully.',
     'SEO_POWERED_BY'                 => 'Powered by %s',
     'SEO_STATUS_OVERVIEW'            => 'System Status',
@@ -53,6 +55,27 @@ $lang = array_merge($lang, [
     'SEO_ACTIVE'                => 'Active',
     'SEO_INACTIVE'              => 'Inactive',
     'SEO_AVAILABLE'             => 'Available',
+
+    // Dashboard Statistics & Web Server Rules
+    'SEO_COVERAGE_TITLE'             => 'SEO Content & Slug Coverage',
+    'SEO_STAT_TOPICS_COVERED'        => 'Topics with SEO Slugs',
+    'SEO_STAT_FORUMS_COVERED'        => 'Forums with SEO Slugs',
+    'SEO_STAT_MEMBERS_COVERED'       => 'User Profiles with Slugs',
+    'SEO_STAT_GLOBAL_COVERAGE'       => 'Global SEO Coverage',
+    'SEO_SITEMAP_QUICK_TITLE'        => 'XML Sitemap Status',
+    'SEO_SITEMAP_QUICK_EXPLAIN'      => 'XML Sitemaps help search engines like Google and Bing discover and index your board content efficiently.',
+    'SEO_VIEW_SITEMAP'               => 'View Sitemap',
+    'SEO_WEB_SERVER_TITLE'           => 'Web Server Configuration',
+    'SEO_WEB_SERVER_SELECT'          => 'Web server:',
+    'SEO_REWRITE_RULES_TITLE'        => 'Rewrite rules',
+    'SEO_REWRITE_APACHE_EXPLAIN'     => 'Paste into your phpBB root .htaccess, after RewriteEngine On and before phpBB’s own app.php rewrite rules.',
+    'SEO_REWRITE_NGINX_ROOT_EXPLAIN' => 'Paste into your Nginx server block configuration for phpBB installed in the domain root.',
+    'SEO_REWRITE_NGINX_SUB_EXPLAIN'  => 'Paste into your Nginx server block configuration for phpBB installed in a subdirectory.',
+    'SEO_REWRITE_COPY'               => 'Copy',
+    'SEO_REWRITE_COPIED'             => 'Copied!',
+    'SEO_QUICK_ACTIONS'              => 'Quick Actions',
+    'SEO_ACTION_RECOMPILE_CACHE'     => 'Rebuild Route Cache',
+    'SEO_CACHE_REBUILT_SUCCESS'      => 'Route cache has been recompiled successfully.',
 
     // Permalinks View
     'SEO_PERMALINKS_TITLE'      => 'Permalink Settings',

@@ -73,7 +73,7 @@ class main_module
 
         switch ($mode) {
             case 'dashboard':
-                $this->handleDashboard($phpbb_container, $user, $template, $request, $configProvider);
+                $this->handleDashboard($phpbb_container, $user, $template, $request, $configProvider, $config);
                 break;
 
             case 'permalinks':
@@ -97,10 +97,64 @@ class main_module
         }
     }
 
-    private function handleDashboard($container, $user, $template, $request, $configProvider): void
+    private function handleDashboard($container, $user, $template, $request, $configProvider, $config): void
     {
         $this->tpl_name = '@phpbbseo_framework/acp_seo_dashboard';
         $this->page_title = $user->lang('ACP_PHPBBSEO_DASHBOARD');
+
+        add_form_key('acp_seo_dashboard');
+
+        // 1. Process Master Switch Submission
+        if ($request->is_set_post('submit_general')) {
+            if (!check_form_key('acp_seo_dashboard')) {
+                trigger_error($user->lang('FORM_INVALID') . adm_back_link($this->u_action . '&amp;mode=dashboard'), E_USER_WARNING);
+            }
+
+            $enableFramework = $request->variable('phpbbseo_framework_enable', 0) ? '1' : '0';
+            $config->set('phpbbseo_framework_enable', $enableFramework);
+
+            try {
+                /** @var RouteCacheCompiler $routeCompiler */
+                $routeCompiler = $container->get('phpbbseo.framework.rewrite.route_cache_compiler');
+                /** @var PermalinkConfiguration $permalinkConfig */
+                $permalinkConfig = $container->get('phpbbseo.framework.rewrite.permalink_configuration');
+                $patterns = [
+                    'forum'  => $permalinkConfig->getPattern('forum'),
+                    'topic'  => $permalinkConfig->getPattern('topic'),
+                    'member' => $permalinkConfig->getPattern('member'),
+                    'group'  => $permalinkConfig->getPattern('group'),
+                ];
+                $routeCompiler->compileAndDump($patterns);
+            } catch (\Throwable $e) {
+                // Non-fatal, routes recompile on demand
+            }
+
+            trigger_error($user->lang('SEO_DASHBOARD_SAVED') . adm_back_link($this->u_action . '&amp;mode=dashboard'));
+        }
+
+        // 2. Process Manual Route Recompile Action
+        if ($request->is_set_post('action_recompile_cache')) {
+            if (!check_form_key('acp_seo_dashboard')) {
+                trigger_error($user->lang('FORM_INVALID') . adm_back_link($this->u_action . '&amp;mode=dashboard'), E_USER_WARNING);
+            }
+
+            try {
+                /** @var RouteCacheCompiler $routeCompiler */
+                $routeCompiler = $container->get('phpbbseo.framework.rewrite.route_cache_compiler');
+                /** @var PermalinkConfiguration $permalinkConfig */
+                $permalinkConfig = $container->get('phpbbseo.framework.rewrite.permalink_configuration');
+                $patterns = [
+                    'forum'  => $permalinkConfig->getPattern('forum'),
+                    'topic'  => $permalinkConfig->getPattern('topic'),
+                    'member' => $permalinkConfig->getPattern('member'),
+                    'group'  => $permalinkConfig->getPattern('group'),
+                ];
+                $routeCompiler->compileAndDump($patterns);
+                trigger_error($user->lang('SEO_CACHE_REBUILT_SUCCESS') . adm_back_link($this->u_action . '&amp;mode=dashboard'));
+            } catch (\Throwable $e) {
+                trigger_error($e->getMessage() . adm_back_link($this->u_action . '&amp;mode=dashboard'), E_USER_WARNING);
+            }
+        }
 
         /** @var PermalinkConfiguration $permalinkConfig */
         $permalinkConfig = $container->get('phpbbseo.framework.rewrite.permalink_configuration');
@@ -111,7 +165,126 @@ class main_module
         $isManualCheck = (bool) $request->variable('check_updates', 0);
         $updateResult = $updateChecker->check($isManualCheck);
 
+        // 3. Compute Database Slug Coverage Statistics
+        $db = $container->get('dbal.conn');
+        $tablePrefix = $container->getParameter('core.table_prefix');
+
+        $slugCounts = [1 => 0, 2 => 0, 3 => 0, 4 => 0];
+        try {
+            $sql = 'SELECT resource_type, COUNT(resource_id) AS total_slugs
+                    FROM ' . $tablePrefix . 'seo_slugs
+                    GROUP BY resource_type';
+            $res = $db->sql_query($sql);
+            while ($row = $db->sql_fetchrow($res)) {
+                $slugCounts[(int) $row['resource_type']] = (int) $row['total_slugs'];
+            }
+            $db->sql_freeresult($res);
+        } catch (\Throwable $e) {
+            // Table might not exist or error
+        }
+
+        // Fetch actual table entity counts (more accurate than desynced board stats)
+        $totalTopics = 0;
+        try {
+            $sql = 'SELECT COUNT(topic_id) as total_topics FROM ' . TOPICS_TABLE;
+            $res = $db->sql_query($sql);
+            $totalTopics = (int) $db->sql_fetchfield('total_topics');
+            $db->sql_freeresult($res);
+        } catch (\Throwable $e) {
+            $totalTopics = (int) ($config['num_topics'] ?? 0);
+        }
+
+        $totalForums = 0;
+        try {
+            $sql = 'SELECT COUNT(forum_id) as total_forums FROM ' . FORUMS_TABLE;
+            $res = $db->sql_query($sql);
+            $totalForums = (int) $db->sql_fetchfield('total_forums');
+            $db->sql_freeresult($res);
+        } catch (\Throwable $e) {
+            $totalForums = max(1, $slugCounts[1]);
+        }
+
+        // Real users: exclude bots and anonymous guests (user_type = USER_IGNORE / 2)
+        $userIgnoreConst = defined('USER_IGNORE') ? USER_IGNORE : 2;
+        $totalUsers = 0;
+        $memberSlugs = 0;
+        try {
+            $sql = 'SELECT COUNT(user_id) as total_users FROM ' . USERS_TABLE . ' WHERE user_type <> ' . (int) $userIgnoreConst;
+            $res = $db->sql_query($sql);
+            $totalUsers = (int) $db->sql_fetchfield('total_users');
+            $db->sql_freeresult($res);
+
+            $sql = 'SELECT COUNT(s.resource_id) as member_slugs
+                    FROM ' . $tablePrefix . 'seo_slugs s
+                    INNER JOIN ' . USERS_TABLE . ' u ON u.user_id = s.resource_id
+                    WHERE s.resource_type = 3 AND u.user_type <> ' . (int) $userIgnoreConst;
+            $res = $db->sql_query($sql);
+            $memberSlugs = (int) $db->sql_fetchfield('member_slugs');
+            $db->sql_freeresult($res);
+        } catch (\Throwable $e) {
+            $totalUsers = (int) ($config['num_users'] ?? 0);
+            $memberSlugs = $slugCounts[3];
+        }
+
+        $topicCoverage = ($totalTopics > 0)
+            ? min(100, (int) round(($slugCounts[2] / $totalTopics) * 100))
+            : 100;
+        $forumCoverage = ($totalForums > 0)
+            ? min(100, (int) round(($slugCounts[1] / max(1, $totalForums)) * 100))
+            : 100;
+        $memberCoverage = ($totalUsers > 0)
+            ? min(100, (int) round(($memberSlugs / max(1, $totalUsers)) * 100))
+            : 100;
+
+        $totalEntities = $totalTopics + $totalForums + $totalUsers;
+        $totalCovered = $slugCounts[2] + $slugCounts[1] + $memberSlugs;
+        $globalCoverage = ($totalEntities > 0)
+            ? min(100, (int) round(($totalCovered / $totalEntities) * 100))
+            : 100;
+
+        // 4. Web Server Rewrite Rules Generation
+        $scriptPath = (string) ($config['script_path'] ?? '/');
+        $scriptPath = '/' . trim($scriptPath, '/');
+        $subDir = ($scriptPath === '/') ? '' : $scriptPath;
+
+        $rewriteApache = "<IfModule mod_rewrite.c>\n" .
+            "RewriteEngine On\n" .
+            "RewriteCond %{REQUEST_FILENAME} !-f\n" .
+            "RewriteCond %{REQUEST_FILENAME} !-d\n" .
+            "RewriteRule ^(.*)$ ext/phpbbseo/framework/rewrite.php [QSA,L]\n" .
+            "</IfModule>";
+
+        $rewriteNginxRoot = "location / {\n" .
+            "\ttry_files \$uri \$uri/ /ext/phpbbseo/framework/rewrite.php?\$query_string;\n" .
+            "}";
+
+        $nginxSubPath = ($subDir !== '') ? $subDir : '/forum';
+        $rewriteNginxSub = "location {$nginxSubPath}/ {\n" .
+            "\ttry_files \$uri \$uri/ {$nginxSubPath}/ext/phpbbseo/framework/rewrite.php?\$query_string;\n" .
+            "}";
+
+        $sitemapEnabled = (string) ($config['seo_sitemap_enable'] ?? '1') === '1';
+        $boardUrl = generate_board_url();
+        $sitemapUrl = $boardUrl . '/sitemap.xml';
+
         $template->assign_vars([
+            'S_SEO_FRAMEWORK_ENABLE'  => (bool) ($config['phpbbseo_framework_enable'] ?? true),
+            'STAT_TOPIC_SLUGS'        => number_format($slugCounts[2]),
+            'STAT_TOTAL_TOPICS'       => number_format($totalTopics),
+            'STAT_TOPIC_COVERAGE'     => $topicCoverage,
+            'STAT_FORUM_SLUGS'        => number_format($slugCounts[1]),
+            'STAT_TOTAL_FORUMS'       => number_format($totalForums),
+            'STAT_MEMBER_SLUGS'       => number_format($memberSlugs),
+            'STAT_TOTAL_USERS'        => number_format($totalUsers),
+            'STAT_MEMBER_COVERAGE'    => $memberCoverage,
+            'STAT_GLOBAL_COVERAGE'    => $globalCoverage,
+            'S_SITEMAP_ENABLED'       => $sitemapEnabled,
+            'SITEMAP_URL'             => $sitemapUrl,
+            'BOARD_SUBDIR'            => $subDir !== '' ? $subDir : '/',
+            'REWRITE_APACHE'          => $rewriteApache,
+            'REWRITE_NGINX_ROOT'      => $rewriteNginxRoot,
+            'REWRITE_NGINX_SUB'       => $rewriteNginxSub,
+            'U_ACTION_DASHBOARD'      => $this->u_action . '&amp;mode=dashboard',
             'SEO_PRESET'              => $permalinkConfig->getActivePreset(),
             'PATTERN_FORUM'           => $permalinkConfig->getPattern('forum'),
             'PATTERN_TOPIC'           => $permalinkConfig->getPattern('topic'),
