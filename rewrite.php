@@ -157,6 +157,9 @@ if (preg_match('#(?:^|/)(adm/index\.php|download/file\.php|file\.php|posting\.ph
                 @chdir($phpbbRootPath . 'adm');
             }
 
+            set_error_handler(static function ($errno, $errstr) {
+                return str_contains($errstr, 'IN_PHPBB already defined');
+            });
             require $phpbbRootPath . $targetScript;
             return;
         }
@@ -365,6 +368,9 @@ if (is_array($routes) && !empty($routes)) {
                 $_SERVER['REQUEST_URI']     = $internalScript . ($internalQuery !== '' ? '?' . $internalQuery : '');
                 $_SERVER['PATH_INFO']       = '';
 
+                set_error_handler(static function ($errno, $errstr) {
+                    return str_contains($errstr, 'IN_PHPBB already defined');
+                });
                 require $phpbbRootPath . $targetScript;
                 return;
             }
@@ -384,5 +390,8 @@ $_SERVER['PHP_SELF']        = $appScript . ($appPath !== '' ? $appPath : '');
 $_SERVER['SCRIPT_FILENAME'] = $phpbbRootPath . 'app.php';
 $_SERVER['PATH_INFO']       = $appPath !== '' ? $appPath : '';
 
+set_error_handler(static function ($errno, $errstr) {
+    return str_contains($errstr, 'IN_PHPBB already defined');
+});
 require $phpbbRootPath . 'app.php';
 return;
