@@ -274,6 +274,7 @@ class main_module
             'STAT_TOPIC_COVERAGE'     => $topicCoverage,
             'STAT_FORUM_SLUGS'        => number_format($slugCounts[1]),
             'STAT_TOTAL_FORUMS'       => number_format($totalForums),
+            'STAT_FORUM_COVERAGE'     => $forumCoverage,
             'STAT_MEMBER_SLUGS'       => number_format($memberSlugs),
             'STAT_TOTAL_USERS'        => number_format($totalUsers),
             'STAT_MEMBER_COVERAGE'    => $memberCoverage,
